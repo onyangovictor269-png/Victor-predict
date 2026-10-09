@@ -54,7 +54,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 const SYMBOL='1HZ100V';
 const APP_ID=1089; // Deriv documented test app ID; registered ID format still needs confirmation.
 const counts=Array(10).fill(0);
-let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0;
+let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
 const digitsEl=document.getElementById('digits');
 const connectionEl=document.getElementById('connection');
@@ -89,8 +89,8 @@ function connectLive(){
   socket=new WebSocket('wss://ws.derivws.com/websockets/v3?app_id='+APP_ID);
   socket.onopen=()=>{
    reconnectAttempts=0;
-   setConnection('Connected','Socket open; requesting live ticks');
-   socket.send(JSON.stringify({ticks:SYMBOL,subscribe:1}));
+   setConnection('Connected','Socket opened; checking server response');
+   socket.send(JSON.stringify({ping:1}));
    if(pingTimer)clearInterval(pingTimer);
    pingTimer=setInterval(()=>{
     if(socket&&socket.readyState===WebSocket.OPEN){try{socket.send(JSON.stringify({ping:1}));}catch(e){}}
@@ -99,6 +99,12 @@ function connectLive(){
   socket.onmessage=(event)=>{
    let data; try{data=JSON.parse(event.data);}catch(e){return;}
    if(data.error){setConnection('Feed error',data.error.message||'Deriv returned an error');return;}
+   if(data.msg_type==='ping'&&!feedStarted){
+    feedStarted=true;
+    setConnection('Connected','Server replied to ping; requesting live ticks');
+    try{socket.send(JSON.stringify({ticks:SYMBOL,subscribe:1}));}catch(e){setConnection('Connection error','Could not request ticks after ping response');}
+    return;
+   }
    if(data.msg_type==='tick'&&data.tick){
     const tick=data.tick;
     const price=String(tick.quote);
