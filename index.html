@@ -36,8 +36,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="prediction-kicker">LIVE SCAN · MATCHES &amp; DIFFERS</div>
 <h2 id="scanHeadline">Collecting data…</h2>
 <div id="scanCandidate" class="scan-candidate">Waiting for 100 live ticks</div>
-<div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select></div>
-<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed DIFFERS rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Matches in validation</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Reference rate</span><strong>90%*</strong></div></div>
+<div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select><button id="rescan">Rescan now</button></div>
+<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed DIFFERS rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Matches in validation</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
 <p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
 <div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
 </section>
@@ -80,6 +80,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 const SYMBOL='1HZ100V';
 const counts=Array(10).fill(0);
 const digitHistory=[];
+const scanCycleDigits=[];
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
 const digitsEl=document.getElementById('digits');
@@ -116,12 +117,13 @@ function drawScan(){
  const rateEl=document.getElementById('scanRate');
  const matchesEl=document.getElementById('scanMatches');
  const mode=document.getElementById('scanContract')?.value||'differs';
- const all=digitHistory.slice(-100);
+ const all=scanCycleDigits.slice();
+ document.getElementById('scanReference').textContent=(mode==='matches'?'10%':'90%');
  panel.classList.remove('scan-green','scan-red','scan-yellow');
  if(all.length<100){
   panel.classList.add('scan-yellow');
   headline.textContent='YELLOW · Insufficient data';
-  candidate.textContent=all.length+'/100 live ticks';
+  candidate.textContent='Rescan collecting: '+all.length+'/100 ticks';
   sampleEl.textContent=Math.max(0,all.length-50)+' / 50 ticks';
   rateEl.textContent='—';matchesEl.textContent='—';
   reason.textContent='Collect 100 live ticks. The first 50 select a candidate digit; the next 50 check the selected MATCHES or DIFFERS rule on separate data.';
@@ -214,6 +216,8 @@ function connectLive(){
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
     samples++;counts[digit]++;digitHistory.push(digit);if(digitHistory.length>5000)digitHistory.shift();
+    if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
+    scanCycleDigits.push(digit);
     document.getElementById('last').textContent=digit;
     document.getElementById('lastPrice').textContent='Live price: '+price;
     document.getElementById('signal').textContent='Observation only';
@@ -238,8 +242,15 @@ function connectLive(){
  }catch(e){setConnection('Connection error','This browser could not open the market feed.');}
 }
 document.getElementById('reconnect').addEventListener('click',connectLive);
+document.getElementById('rescan').addEventListener('click',()=>{
+ scanCycleDigits.length=0;
+ drawScan();
+ document.getElementById('scanHeadline').textContent='YELLOW · New scan started';
+ document.getElementById('scanCandidate').textContent='Collecting a fresh 100-tick sample';
+ document.getElementById('scanReason').textContent='New scan started from the next live tick. The first 50 ticks choose a candidate; the following 50 evaluate it. This can take time on a slow feed.';
+});
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;history.length=0;drawDigits();drawTrend();drawScan();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;scanCycleDigits.length=0;history.length=0;drawDigits();drawTrend();drawScan();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
