@@ -95,6 +95,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 </main>
 <footer>VictorPredict · Independent research tool · Trading involves risk</footer>
 <script>
+window.addEventListener('error',function(event){
+ const note=document.getElementById('connectionNote');
+ if(note) note.textContent='JavaScript error: '+(event.message||'script failed')+' (line '+(event.lineno||'?')+')';
+});
+</script>
+<script>
 const SYMBOL='1HZ100V';
 const counts=Array(10).fill(0);
 const digitHistory=[];
