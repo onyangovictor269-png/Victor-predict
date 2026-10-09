@@ -348,7 +348,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  // Keep the completed walk-forward record so rescans do not erase evidence.
  drawScan();
  document.getElementById('scanHeadline').textContent='YELLOW · Candidate refreshed';
- document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read Deriv's internal digit generator.';
+ document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
  counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
