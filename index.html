@@ -364,7 +364,14 @@ function updateSelectionNote(){
  const target=document.getElementById('target').value;
  document.getElementById('message').textContent='Analysis filter selected: '+(contract==='matches'?'Matches':'Differs')+' digit '+target+'. This is only a display setting; it does not create a prediction or place a trade.';
 }
-drawDigits();drawTrend();drawScan();drawSignalDashboard();connectLive();
+// Start the public feed before optional dashboard rendering, so a UI rendering error cannot block connection.
+connectLive();
+try {
+ drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
+} catch (e) {
+ setConnection('Connecting…','Feed started; dashboard rendering error: '+(e&&e.message?e.message:'unknown error'));
+ console.error('VictorPredict dashboard startup error',e);
+}
 </script>
 </body>
 </html>
