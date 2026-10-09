@@ -269,6 +269,8 @@ function drawHistory(){
 }
 function setConnection(status,note){connectionEl.textContent=status;connectionNote.textContent=note;}
 function connectLive(){
+ // Each new socket must subscribe again after its ping; do not carry the prior socket's flag.
+ feedStarted=false;
  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
  if(pingTimer){clearInterval(pingTimer);pingTimer=null;}
  if(socket){try{socket.onclose=null;socket.close();}catch(e){} socket=null;}
