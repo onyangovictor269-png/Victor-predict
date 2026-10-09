@@ -167,8 +167,15 @@ function drawSignalDashboard(){
   ? 'Collecting data: '+ds.length+'/'+Math.min(n,25)+' ticks available. Results are more informative with a larger sample.'
   : 'Showing observed rates from the latest '+ds.length+' ticks. Rise/Fall uses '+moves+' price changes; unchanged prices are excluded. These are backward-looking statistics, not next-tick forecasts.';
 }
-// Adaptive ensemble ("AI-assisted" statistical model): combines long-window frequency,
- // recent frequency, and transitions observed after the latest digit. It only sees public ticks.
+// Walk-forward adaptive selector. Candidate methods are scored on past outcomes only;
+// selection uses a shrunk rolling hit rate to reduce chasing tiny, noisy samples.
+const MODEL_NAMES=['Long frequency','Recent frequency','Last-digit transition','Weighted ensemble','Repeat last digit'];
+const modelResults=Object.fromEntries(MODEL_NAMES.map(name=>[name,[]]));
+function mostLikely(counts){
+ let best=0;
+ for(let i=1;i<counts.length;i++)if(counts[i]>counts[best])best=i;
+ return best;
+}
 function predictDigit(priorDigits){
  if(priorDigits.length<100)return null;
  const long=priorDigits.slice(-100), recent=priorDigits.slice(-25);
@@ -181,13 +188,27 @@ function predictDigit(priorDigits){
  }
  const normalize=a=>{const total=a.reduce((s,v)=>s+v,0);return a.map(v=>v/total);};
  const lp=normalize(longCounts), rp=normalize(recentCounts), tp=normalize(transition);
- // Reduce transition influence when few matching prior states exist.
  const tw=Math.min(0.25,transitionN/(transitionN+20)*0.25);
  const lw=0.45, rw=0.55-tw;
- const score=lp.map((v,i)=>lw*v+rw*rp[i]+tw*tp[i]);
- let best=0;
- for(let i=1;i<score.length;i++)if(score[i]>score[best])best=i;
- return {digit:best, scores:score, transitionSamples:transitionN};
+ const ensemble=lp.map((v,i)=>lw*v+rw*rp[i]+tw*tp[i]);
+ const candidates={
+  'Long frequency':mostLikely(longCounts),
+  'Recent frequency':mostLikely(recentCounts),
+  'Last-digit transition':mostLikely(transition),
+  'Weighted ensemble':mostLikely(ensemble),
+  'Repeat last digit':long[long.length-1]
+ };
+ // Require at least 50 scored forecasts per method; shrink each rate toward the 10% reference.
+ let selected='Weighted ensemble', bestScore=-Infinity;
+ for(const name of MODEL_NAMES){
+  const outcomes=modelResults[name];
+  if(outcomes.length<50)continue;
+  const recentOutcomes=outcomes.slice(-200);
+  const hits=recentOutcomes.reduce((sum,x)=>sum+(x?1:0),0);
+  const score=(hits+10)/(recentOutcomes.length+100);
+  if(score>bestScore){bestScore=score;selected=name;}
+ }
+ return {digit:candidates[selected], selectedModel:selected, candidates, transitionSamples:transitionN};
 }
 function drawScan(){
  const panel=document.querySelector('.prediction-panel');
@@ -227,7 +248,8 @@ function drawScan(){
  const target=prediction?prediction.digit:null;
  if(target===null){candidate.textContent='Collecting model data';return;}
  lastMatchesCandidate=target;
- candidate.textContent=mode.toUpperCase()+' '+target+' · adaptive ensemble candidate';
+ const currentModel=predictDigit(training)?.selectedModel||'Weighted ensemble';
+ candidate.textContent=mode.toUpperCase()+' '+target+' · '+currentModel;
  sampleEl.textContent=n+' forecast outcomes';
  rateEl.textContent=n?(rate*100).toFixed(1)+'%':'—';
  matchesEl.textContent=n?successes+' / '+n:'—';
@@ -314,13 +336,19 @@ function connectLive(){
     const digitMatch=price.match(/(\d)$/);
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
-    // Predict this tick using only the previous 100 ticks, then score against the actual digit.
+    // Select using past model scores, then score each candidate against this new tick.
     const priorDigits=digitHistory.slice(-100);
     if(priorDigits.length===100){
      const modelPrediction=predictDigit(priorDigits);
-     const predictedDigit=modelPrediction?.digit;
-     if(predictedDigit!==null&&predictedDigit!==undefined)matchesForecasts.push({target:predictedDigit,hit:digit===predictedDigit});
-     if(matchesForecasts.length>5000)matchesForecasts.shift();
+     if(modelPrediction){
+      for(const name of MODEL_NAMES){
+       modelResults[name].push(modelPrediction.candidates[name]===digit);
+       if(modelResults[name].length>5000)modelResults[name].shift();
+      }
+      const predictedDigit=modelPrediction.digit;
+      matchesForecasts.push({target:predictedDigit,hit:digit===predictedDigit,model:modelPrediction.selectedModel});
+      if(matchesForecasts.length>5000)matchesForecasts.shift();
+     }
     }
     samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5001)priceHistory.shift();
     if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
@@ -356,7 +384,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
