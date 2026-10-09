@@ -87,6 +87,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="bars" id="overdueDigits"></div>
 <p class="muted" id="trendCaveat">Collect at least 20 live ticks for a short-window comparison. A digit being absent longer does not make it more likely to appear next.</p>
 </section>
+<section class="card" style="margin:16px 0;border:2px solid #a78bfa">
+<h3 style="margin-top:0">Digit Pattern Audit</h3>
+<p class="muted">Statistical checks on the ticks actually received in this session. The audit looks for unusual digit frequencies and dependence between consecutive digits. A low p-value is a reason to investigate, not proof of a tradable edge.</p>
+<div class="stats">
+<div class="stat"><span class="label">Audit sample</span><strong id="auditN">0 ticks</strong></div>
+<div class="stat"><span class="label">Frequency test</span><strong id="auditFreqP">Need more data</strong><small class="muted" id="auditFreqNote">Checks 10-digit uniformity</small></div>
+<div class="stat"><span class="label">Transition test</span><strong id="auditTransP">Need more data</strong><small class="muted" id="auditTransNote">Checks adjacent-digit dependence</small></div>
+<div class="stat"><span class="label">Same digit twice</span><strong id="auditRepeat">—</strong><small class="muted" id="auditRepeatNote">Uniform independent reference: 10%</small></div>
+<div class="stat"><span class="label">Most common digit</span><strong id="auditTopDigit">—</strong><small class="muted" id="auditTopNote">Observed frequency only</small></div>
+<div class="stat"><span class="label">Audit interpretation</span><strong id="auditVerdict">Collecting ticks</strong><small class="muted" id="auditVerdictNote">Need at least 1,000 ticks for the first screen</small></div>
+</div>
+<p class="muted" id="auditExplanation">This uses only public observed tick prices. It cannot inspect Deriv's private generator. Repeatedly testing many windows can create false alarms, so any finding needs a fresh holdout test.</p>
+</section>
 <section class="card" style="margin-top:14px">
 <h3>Recent live ticks</h3>
 <div class="muted">Latest prices and last digits received from the public market feed; not trade outcomes.</div>
@@ -480,7 +493,7 @@ function updateSelectionNote(){
 // Start the public feed before optional dashboard rendering, so a UI rendering error cannot block connection.
 connectLive();
 try {
- drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
+ drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
 } catch (e) {
  setConnection('Connecting…','Feed started; dashboard rendering error: '+(e&&e.message?e.message:'unknown error'));
  console.error('VictorPredict dashboard startup error',e);
