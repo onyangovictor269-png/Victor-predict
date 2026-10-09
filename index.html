@@ -97,7 +97,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <script>
 const SYMBOL='1HZ100V';
 const counts=Array(10).fill(0);
-const digitHistory=[];\nconst priceHistory=[];
+const digitHistory=[];
+const priceHistory=[];
 const scanCycleDigits=[];
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
@@ -306,7 +307,10 @@ document.getElementById('clear').addEventListener('click',()=>{
  document.getElementById('confidence').textContent='Counts cleared; waiting for live ticks';
  document.getElementById('message').textContent='Session counts cleared. New counts will be based on live ticks received from Deriv.';
 });
-document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});\ndocument.getElementById('signalWindow').addEventListener('change',drawSignalDashboard);\ndocument.getElementById('signalDigit').addEventListener('change',drawSignalDashboard);\ndocument.getElementById('signalRefresh').addEventListener('click',drawSignalDashboard);
+document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});
+document.getElementById('signalWindow').addEventListener('change',drawSignalDashboard);
+document.getElementById('signalDigit').addEventListener('change',drawSignalDashboard);
+document.getElementById('signalRefresh').addEventListener('click',drawSignalDashboard);
 document.getElementById('scanContract').addEventListener('change',drawScan);
 document.getElementById('contract').addEventListener('change',updateSelectionNote);
 document.getElementById('target').addEventListener('change',updateSelectionNote);
