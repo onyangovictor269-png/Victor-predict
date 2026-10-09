@@ -112,8 +112,8 @@ function connectLive(){
    }
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
-  socket.onclose=()=>{
-   if(connectionEl.textContent!=='Feed error')setConnection('Disconnected','Connection closed. Tap Reconnect feed.');
+  socket.onclose=(event)=>{
+   if(connectionEl.textContent!=='Feed error')setConnection('Disconnected','Connection closed (code '+event.code+(event.reason?': '+event.reason:'')+'). Tap Reconnect feed. If it closes repeatedly, we may need a registered Deriv App ID.');
   };
  }catch(e){setConnection('Connection error','This browser could not open the market feed.');}
 }
