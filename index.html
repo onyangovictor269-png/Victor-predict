@@ -224,12 +224,12 @@ function drawScan(){
  lastMatchesCandidate=target;
  candidate.textContent=mode.toUpperCase()+' '+target+' · adaptive ensemble candidate';
  sampleEl.textContent=n+' forecast outcomes';
- rateEl.textContent=n?rate.toFixed(1)+'%':'—';
+ rateEl.textContent=n?(rate*100).toFixed(1)+'%':'—';
  matchesEl.textContent=n?successes+' / '+n:'—';
  if(n<200){
   panel.classList.add('scan-yellow');
   headline.textContent='YELLOW · Accuracy not established';
-  reason.textContent='Walk-forward test: '+n+'/200 outcomes. Observed '+mode.toUpperCase()+' success rate '+(n?rate.toFixed(1)+'%':'not available')+'; reference '+baseline+'%. Need at least 200 forecasts and a 95% confidence lower bound above the reference before marking a signal as passed. This is a local statistical ensemble, not a trained neural network.';
+  reason.textContent='Walk-forward test: '+n+'/200 outcomes. Observed '+mode.toUpperCase()+' success rate '+(n?(rate*100).toFixed(1)+'%':'not available')+'; reference '+baseline+'%. Need at least 200 forecasts and a 95% confidence lower bound above the reference before marking a signal as passed. This is a local statistical ensemble, not a trained neural network.';
   return;
  }
  const passed=wilsonLower>baseline;
