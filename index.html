@@ -54,7 +54,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 const SYMBOL='1HZ100V';
 const APP_ID=1089; // Deriv's documented test application ID; replace with your own registered app ID before public production use.
 const counts=Array(10).fill(0);
-let samples=0, socket=null, reconnectTimer=null;
+let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0;
 const history=[];
 const digitsEl=document.getElementById('digits');
 const connectionEl=document.getElementById('connection');
@@ -80,6 +80,7 @@ function drawHistory(){
 function setConnection(status,note){connectionEl.textContent=status;connectionNote.textContent=note;}
 function connectLive(){
  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
+ if(pingTimer){clearInterval(pingTimer);pingTimer=null;}
  if(socket){try{socket.onclose=null;socket.close();}catch(e){} socket=null;}
  setConnection('Connecting…','Opening public Deriv market feed');
  document.getElementById('signal').textContent='Collecting data';
@@ -87,8 +88,13 @@ function connectLive(){
  try{
   socket=new WebSocket('wss://ws.derivws.com/websockets/v3?app_id='+APP_ID);
   socket.onopen=()=>{
-   setConnection('Connected','Socket open; waiting for verified tick');
+   reconnectAttempts=0;
+   setConnection('Connected','Socket open; requesting live ticks');
    socket.send(JSON.stringify({ticks:SYMBOL,subscribe:1}));
+   if(pingTimer)clearInterval(pingTimer);
+   pingTimer=setInterval(()=>{
+    if(socket&&socket.readyState===WebSocket.OPEN){try{socket.send(JSON.stringify({ping:1}));}catch(e){}}
+   },30000);
   };
   socket.onmessage=(event)=>{
    let data; try{data=JSON.parse(event.data);}catch(e){return;}
@@ -113,7 +119,13 @@ function connectLive(){
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
   socket.onclose=(event)=>{
-   if(connectionEl.textContent!=='Feed error')setConnection('Disconnected','Connection closed (code '+event.code+(event.reason?': '+event.reason:'')+'). Tap Reconnect feed. If it closes repeatedly, we may need a registered Deriv App ID.');
+   if(pingTimer){clearInterval(pingTimer);pingTimer=null;}
+   if(connectionEl.textContent!=='Feed error')setConnection('Disconnected','Connection closed (code '+event.code+(event.reason?': '+event.reason:'')+'). Reconnecting automatically; if it keeps failing, we may need to register a Deriv App ID.');
+   if(!reconnectTimer){
+    const delay=Math.min(30000,2000*Math.pow(2,Math.min(reconnectAttempts,4)));
+    reconnectAttempts++;
+    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connectLive();},delay);
+   }
   };
  }catch(e){setConnection('Connection error','This browser could not open the market feed.');}
 }
