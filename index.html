@@ -1,0 +1,110 @@
+ <!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VictorPredict | Deriv Analytics</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151e30;--line:#29364d;--green:#36e0a1;--muted:#9ba9bf;--text:#f5f7ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif}
+header{padding:22px 16px;border-bottom:1px solid var(--line);background:#10182a}
+.wrap{max-width:1000px;margin:auto}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{background:var(--green);color:#07150f;font-weight:900;padding:12px;border-radius:12px}
+h1{font-size:22px;margin:0}
+.sub,.muted{color:var(--muted);font-size:13px}
+main{max-width:1000px;margin:auto;padding:18px 14px}
+.notice{border:1px solid #735c25;background:#2a2415;padding:12px;border-radius:12px;color:#ffdc83;font-size:13px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.card{background:var(--panel);border:1px solid var(--line);padding:16px;border-radius:16px;min-width:0}
+.label{color:var(--muted);font-size:13px}
+.value{font-size:23px;font-weight:750;margin-top:8px;overflow-wrap:anywhere}
+.green{color:var(--green)}
+button,select{padding:12px;border-radius:10px;border:1px solid var(--line);background:#202c41;color:var(--text);font:inherit}
+button{background:var(--green);color:#062016;font-weight:750;border:0;cursor:pointer}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.controls select{flex:1;min-width:145px}
+.bars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}
+.digit{background:#202b40;border-radius:10px;text-align:center;padding:10px 3px}
+.digit strong{display:block;font-size:19px}
+.digit small{font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+th,td{text-align:left;padding:10px 5px;border-bottom:1px solid var(--line)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
+@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.bars{grid-template-columns:repeat(10,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header><div class="wrap brand"><div class="logo">VP</div><div><h1>VictorPredict</h1><div class="sub">DERIV DIGITS ANALYTICS</div></div></div></header>
+<main>
+<div class="notice"><strong>Research mode only.</strong> This initial dashboard uses sample data. It is NOT connected to Deriv, does not provide live predictions, and cannot place trades. We will add a verified live data connection next.</div>
+<div class="grid">
+<div class="card"><div class="label">Market</div><div class="value">Volatility 100 (1s)</div><div class="sub">Selected market</div></div>
+<div class="card"><div class="label">Connection</div><div class="value" id="connection">Offline</div><div class="sub">Sample mode</div></div>
+<div class="card"><div class="label">Last digit</div><div class="value" id="last">—</div><div class="sub">Sample tick only</div></div>
+<div class="card"><div class="label">Signal</div><div class="value" id="signal">No signal</div><div class="sub" id="confidence">Insufficient live data</div></div>
+</div>
+<section class="card">
+<h3>Digit analysis</h3>
+<div class="muted">Sample frequencies from generated numbers; not market statistics.</div>
+<div class="bars" id="digits"></div>
+<div class="controls">
+<select id="contract"><option value="differs">Differs from digit</option><option value="matches">Matches digit</option></select>
+<select id="target"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select>
+<button id="sample">Generate sample</button>
+</div>
+<p class="muted" id="message">No prediction has been tested. Sample results cannot establish a trading advantage.</p>
+</section>
+<section class="card" style="margin-top:14px">
+<h3>Prediction test history</h3>
+<div class="muted">Sample outcomes only; they are not actual Deriv trades.</div>
+<table><thead><tr><th>Sample</th><th>Digit</th><th>Selection</th><th>Outcome</th></tr></thead><tbody id="history"><tr><td colspan="4">No samples yet</td></tr></tbody></table>
+</section>
+</main>
+<footer>VictorPredict · Independent research tool · Trading involves risk</footer>
+<script>
+const counts=Array(10).fill(0);
+let samples=0;
+const history=[];
+const digits=document.getElementById('digits');
+function drawDigits(){
+ digits.innerHTML='';
+ counts.forEach((n,d)=>{
+  const el=document.createElement('div');
+  el.className='digit';
+  el.innerHTML='<strong>'+d+'</strong><small>'+(samples?(n/samples*100).toFixed(0)+'%':'—')+'</small>';
+  digits.appendChild(el);
+ });
+}
+function drawHistory(){
+ const body=document.getElementById('history');
+ body.innerHTML='';
+ if(!history.length){body.innerHTML='<tr><td colspan="4">No samples yet</td></tr>';return;}
+ history.slice().reverse().forEach((h,i)=>{
+  const tr=document.createElement('tr');
+  [history.length-i,h.digit,h.selection,h.outcome].forEach(v=>{
+   const td=document.createElement('td');td.textContent=v;tr.appendChild(td);
+  });
+  body.appendChild(tr);
+ });
+}
+document.getElementById('sample').addEventListener('click',()=>{
+ const digit=Math.floor(Math.random()*10);
+ const target=Number(document.getElementById('target').value);
+ const contract=document.getElementById('contract').value;
+ const win=contract==='matches'?digit===target:digit!==target;
+ counts[digit]++;samples++;
+ document.getElementById('last').textContent=digit;
+ document.getElementById('signal').textContent='Sample only';
+ document.getElementById('confidence').textContent='No predictive confidence';
+ document.getElementById('message').textContent='Generated digit '+digit+'. '+(win?'This artificial sample matches the selected condition.':'This artificial sample does not match the selected condition.')+' It is not a forecast.';
+ history.push({digit,selection:contract+' '+target,outcome:win?'Sample match':'Sample non-match'});
+ if(history.length>20)history.shift();
+ drawDigits();drawHistory();
+});
+drawDigits();
+</script>
+</body>
+</html>
