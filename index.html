@@ -37,7 +37,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <h2 id="scanHeadline">Collecting data…</h2>
 <div id="scanCandidate" class="scan-candidate">Waiting for 100 live ticks</div>
 <div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select><button id="rescan">Rescan now</button></div>
-<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed success rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Successful outcomes</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
+<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed success rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Successful outcomes</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Recent 100 forecasts</span><strong id="scanRecent">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
 <p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
 <div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
 </section>
@@ -203,7 +203,11 @@ function drawScan(){
  const n=outcomes.length;
  const successes=mode==='matches'?outcomes.filter(x=>x.hit).length:outcomes.filter(x=>!x.hit).length;
  const rate=n?successes/n:0;
+ const recent=outcomes.slice(-100);
+ const recentSuccesses=mode==='matches'?recent.filter(x=>x.hit).length:recent.filter(x=>!x.hit).length;
  const baseline=mode==='matches'?10:90;
+ const recentEl=document.getElementById('scanRecent');
+ if(recentEl) recentEl.textContent=recent.length?recentSuccesses+'/'+recent.length+' · '+(recentSuccesses/recent.length*100).toFixed(1)+'%':'—';
  // Wilson 95% lower confidence bound: avoid treating a tiny lucky sample as an edge.
  const z=1.96;
  const wilsonLower=n?((rate+z*z/(2*n)-z*Math.sqrt((rate*(1-rate)+z*z/(4*n))/n))/(1+z*z/n))*100:0;
@@ -215,6 +219,7 @@ function drawScan(){
   candidate.textContent='Collecting '+training.length+'/100 ticks';
   sampleEl.textContent=n+' forecast outcomes';
   rateEl.textContent='—';matchesEl.textContent='—';
+  const recentEl=document.getElementById('scanRecent'); if(recentEl)recentEl.textContent='—';
   reason.textContent='The adaptive model combines the latest 100-tick frequency, the latest 25-tick frequency, and recent digit transitions. Each forecast is scored against the next actual tick; no hidden Deriv generator data is accessed.';
   return;
  }
