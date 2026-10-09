@@ -35,7 +35,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <h3>Live digit frequency</h3>
 <div class="muted" id="freqNote">Counts and percentages will use real ticks received from Deriv during this browser session.</div>
 <div class="controls"><select id="windowSize" aria-label="Observation window"><option value="25">Latest 25 ticks</option><option value="50" selected>Latest 50 ticks</option><option value="100">Latest 100 ticks</option><option value="all">All session ticks</option></select></div>
-<div class="stats"><div class="stat"><span class="label">Ticks in selected window</span><strong id="windowCount">0</strong></div><div class="stat"><span class="label">Most frequent digit</span><strong id="mostCommon">Not enough data</strong></div></div>
+<div class="stats"><div class="stat"><span class="label">Ticks in selected window</span><strong id="windowCount">0</strong></div><div class="stat"><span class="label">Most frequent digit</span><strong id="mostCommon">Not enough data</strong></div><div class="stat"><span class="label">Expected count at 10% each</span><strong id="expectedCount">—</strong></div><div class="stat"><span class="label">Largest deviation from 10%</span><strong id="largestDeviation">—</strong></div></div>
+<p class="muted" id="statsCaveat">The 10% line is a uniform-digit reference only, not proof that outcomes are uniform or predictive.</p>
 <div class="bars" id="digits"></div>
 <div class="controls">
 <select id="contract"><option value="differs">Review: Differs from digit</option><option value="matches">Review: Matches digit</option></select>
@@ -71,6 +72,11 @@ function drawDigits(){
  const maxCount=Math.max(...windowCounts);
  const leaders=windowDigits.length?windowCounts.map((n,d)=>({n,d})).filter(x=>x.n===maxCount).map(x=>x.d):[];
  document.getElementById('mostCommon').textContent=windowDigits.length?(leaders.join(', ')+' ('+(maxCount/windowDigits.length*100).toFixed(1)+'%)'):'Not enough data';
+ document.getElementById('expectedCount').textContent=windowDigits.length?(windowDigits.length/10).toFixed(1)+' per digit':'—';
+ const deviations=windowCounts.map((n,d)=>({d,pct:windowDigits.length?n/windowDigits.length*100:0,delta:windowDigits.length?n/windowDigits.length*100-10:0}));
+ const largest=deviations.reduce((best,item)=>Math.abs(item.delta)>Math.abs(best.delta)?item:best,{d:0,pct:0,delta:0});
+ document.getElementById('largestDeviation').textContent=windowDigits.length?largest.d+' ('+(largest.delta>0?'+':'')+largest.delta.toFixed(1)+' pp)':'—';
+ document.getElementById('statsCaveat').textContent=windowDigits.length?'Largest deviation compares the observed share with a 10% reference; it is descriptive, not a forecast.':'Collect live ticks to calculate a comparison.';
  windowCounts.forEach((n,d)=>{
   const el=document.createElement('div'); el.className='digit';
   const pct=windowDigits.length?(n/windowDigits.length*100).toFixed(1)+'%':'—';
