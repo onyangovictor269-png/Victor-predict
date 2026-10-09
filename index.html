@@ -15,7 +15,7 @@ main{max-width:1000px;margin:auto;padding:18px 14px}.notice{border:1px solid #73
 .label{color:var(--muted);font-size:13px}.value{font-size:23px;font-weight:750;margin-top:8px;overflow-wrap:anywhere}.green{color:var(--green)}
 button,select{padding:12px;border-radius:10px;border:1px solid var(--line);background:#202c41;color:var(--text);font:inherit}
 button{background:var(--green);color:#062016;font-weight:750;border:0;cursor:pointer}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.controls select{flex:1;min-width:145px}
-.bars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}.digit{background:#202b40;border-radius:10px;text-align:center;padding:10px 3px}.digit strong{display:block;font-size:19px}.digit small{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.stat{background:#202b40;padding:12px;border-radius:10px}.stat strong{display:block;font-size:18px;margin-top:4px}.bars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}.digit{background:#202b40;border-radius:10px;text-align:center;padding:10px 3px}.digit strong{display:block;font-size:19px}.digit small{font-size:11px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}th,td{text-align:left;padding:10px 5px;border-bottom:1px solid var(--line)}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.bars{grid-template-columns:repeat(10,minmax(0,1fr))}}
@@ -34,6 +34,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <section class="card">
 <h3>Live digit frequency</h3>
 <div class="muted" id="freqNote">Counts and percentages will use real ticks received from Deriv during this browser session.</div>
+<div class="controls"><select id="windowSize" aria-label="Observation window"><option value="25">Latest 25 ticks</option><option value="50" selected>Latest 50 ticks</option><option value="100">Latest 100 ticks</option><option value="all">All session ticks</option></select></div>
+<div class="stats"><div class="stat"><span class="label">Ticks in selected window</span><strong id="windowCount">0</strong></div><div class="stat"><span class="label">Most frequent digit</span><strong id="mostCommon">Not enough data</strong></div></div>
 <div class="bars" id="digits"></div>
 <div class="controls">
 <select id="contract"><option value="differs">Review: Differs from digit</option><option value="matches">Review: Matches digit</option></select>
@@ -53,6 +55,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <script>
 const SYMBOL='1HZ100V';
 const counts=Array(10).fill(0);
+const digitHistory=[];
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
 const digitsEl=document.getElementById('digits');
@@ -60,9 +63,17 @@ const connectionEl=document.getElementById('connection');
 const connectionNote=document.getElementById('connectionNote');
 function drawDigits(){
  digitsEl.innerHTML='';
- counts.forEach((n,d)=>{
+ const selected=document.getElementById('windowSize')?.value||'50';
+ const windowDigits=selected==='all'?digitHistory.slice():digitHistory.slice(-Number(selected));
+ const windowCounts=Array(10).fill(0);
+ windowDigits.forEach(d=>windowCounts[d]++);
+ document.getElementById('windowCount').textContent=windowDigits.length;
+ const maxCount=Math.max(...windowCounts);
+ const leaders=windowDigits.length?windowCounts.map((n,d)=>({n,d})).filter(x=>x.n===maxCount).map(x=>x.d):[];
+ document.getElementById('mostCommon').textContent=windowDigits.length?(leaders.join(', ')+' ('+(maxCount/windowDigits.length*100).toFixed(1)+'%)'):'Not enough data';
+ windowCounts.forEach((n,d)=>{
   const el=document.createElement('div'); el.className='digit';
-  const pct=samples?(n/samples*100).toFixed(1)+'%':'—';
+  const pct=windowDigits.length?(n/windowDigits.length*100).toFixed(1)+'%':'—';
   el.innerHTML='<strong>'+d+'</strong><small>'+n+' · '+pct+'</small>';
   digitsEl.appendChild(el);
  });
@@ -110,7 +121,7 @@ function connectLive(){
     const digitMatch=price.match(/(\d)$/);
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
-    samples++;counts[digit]++;
+    samples++;counts[digit]++;digitHistory.push(digit);if(digitHistory.length>5000)digitHistory.shift();
     document.getElementById('last').textContent=digit;
     document.getElementById('lastPrice').textContent='Live price: '+price;
     document.getElementById('signal').textContent='Observation only';
@@ -136,13 +147,14 @@ function connectLive(){
 }
 document.getElementById('reconnect').addEventListener('click',connectLive);
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;history.length=0;drawDigits();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;history.length=0;drawDigits();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
  document.getElementById('confidence').textContent='Counts cleared; waiting for live ticks';
  document.getElementById('message').textContent='Session counts cleared. New counts will be based on live ticks received from Deriv.';
 });
+document.getElementById('windowSize').addEventListener('change',drawDigits);
 document.getElementById('contract').addEventListener('change',updateSelectionNote);
 document.getElementById('target').addEventListener('change',updateSelectionNote);
 function updateSelectionNote(){
