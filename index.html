@@ -33,11 +33,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="card"><div class="label">Analysis</div><div class="value" id="signal">Collecting data</div><div class="sub" id="confidence">No prediction; gathering live ticks</div></div>
 </div>
 <section class="prediction-panel" aria-live="polite">
-<div class="prediction-kicker">LIVE SCAN · MATCHES &amp; DIFFERS</div>
+<div class="prediction-kicker">ADAPTIVE AI-ASSISTED SCAN · MATCHES &amp; DIFFERS</div>
 <h2 id="scanHeadline">Collecting data…</h2>
 <div id="scanCandidate" class="scan-candidate">Waiting for 100 live ticks</div>
 <div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select><button id="rescan">Rescan now</button></div>
-<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed DIFFERS rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Matches in validation</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
+<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed success rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Successful outcomes</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
 <p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
 <div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
 </section>
@@ -161,6 +161,28 @@ function drawSignalDashboard(){
   ? 'Collecting data: '+ds.length+'/'+Math.min(n,25)+' ticks available. Results are more informative with a larger sample.'
   : 'Showing observed rates from the latest '+ds.length+' ticks. Rise/Fall uses '+moves+' price changes; unchanged prices are excluded. These are backward-looking statistics, not next-tick forecasts.';
 }
+// Adaptive ensemble ("AI-assisted" statistical model): combines long-window frequency,
+ // recent frequency, and transitions observed after the latest digit. It only sees public ticks.
+function predictDigit(priorDigits){
+ if(priorDigits.length<100)return null;
+ const long=priorDigits.slice(-100), recent=priorDigits.slice(-25);
+ const longCounts=Array(10).fill(1), recentCounts=Array(10).fill(1), transition=Array(10).fill(1);
+ long.forEach(d=>longCounts[d]++);
+ recent.forEach(d=>recentCounts[d]++);
+ let transitionN=0;
+ for(let i=0;i<long.length-1;i++){
+  if(long[i]===long[long.length-1]){transition[long[i+1]]++;transitionN++;}
+ }
+ const normalize=a=>{const total=a.reduce((s,v)=>s+v,0);return a.map(v=>v/total);};
+ const lp=normalize(longCounts), rp=normalize(recentCounts), tp=normalize(transition);
+ // Reduce transition influence when few matching prior states exist.
+ const tw=Math.min(0.25,transitionN/(transitionN+20)*0.25);
+ const lw=0.45, rw=0.55-tw;
+ const score=lp.map((v,i)=>lw*v+rw*rp[i]+tw*tp[i]);
+ let best=0;
+ for(let i=1;i<score.length;i++)if(score[i]>score[best])best=i;
+ return {digit:best, scores:score, transitionSamples:transitionN};
+}
 function drawScan(){
  const panel=document.querySelector('.prediction-panel');
  const headline=document.getElementById('scanHeadline');
@@ -187,22 +209,21 @@ function drawScan(){
   candidate.textContent='Collecting '+training.length+'/100 ticks';
   sampleEl.textContent=n+' forecast outcomes';
   rateEl.textContent='—';matchesEl.textContent='—';
-  reason.textContent='The candidate will be selected from the latest 100 completed ticks. Each forecast is then checked against the next actual tick.';
+  reason.textContent='The adaptive model combines the latest 100-tick frequency, the latest 25-tick frequency, and recent digit transitions. Each forecast is scored against the next actual tick; no hidden Deriv generator data is accessed.';
   return;
  }
- const freq=Array(10).fill(0);
- training.forEach(d=>freq[d]++);
- const max=Math.max(...freq);
- const target=freq.findIndex(x=>x===max);
+ const prediction=predictDigit(training);
+ const target=prediction?prediction.digit:null;
+ if(target===null){candidate.textContent='Collecting model data';return;}
  lastMatchesCandidate=target;
- candidate.textContent=mode.toUpperCase()+' '+target+' · candidate from last 100 ticks';
+ candidate.textContent=mode.toUpperCase()+' '+target+' · adaptive ensemble candidate';
  sampleEl.textContent=n+' forecast outcomes';
  rateEl.textContent=n?rate.toFixed(1)+'%':'—';
  matchesEl.textContent=n?successes+' / '+n:'—';
  if(n<200){
   panel.classList.add('scan-yellow');
   headline.textContent='YELLOW · Accuracy not established';
-  reason.textContent='Walk-forward test: '+n+'/200 outcomes. Observed '+mode.toUpperCase()+' success rate '+(n?rate.toFixed(1)+'%':'not available')+'; reference '+baseline+'%. Need at least 200 forecasts and a 95% confidence lower bound above the reference before marking a signal as passed.';
+  reason.textContent='Walk-forward test: '+n+'/200 outcomes. Observed '+mode.toUpperCase()+' success rate '+(n?rate.toFixed(1)+'%':'not available')+'; reference '+baseline+'%. Need at least 200 forecasts and a 95% confidence lower bound above the reference before marking a signal as passed. This is a local statistical ensemble, not a trained neural network.';
   return;
  }
  const passed=wilsonLower>baseline;
@@ -283,9 +304,9 @@ function connectLive(){
     // Predict this tick using only the previous 100 ticks, then score against the actual digit.
     const priorDigits=digitHistory.slice(-100);
     if(priorDigits.length===100){
-     const priorFreq=Array(10).fill(0);priorDigits.forEach(d=>priorFreq[d]++);
-     const highest=Math.max(...priorFreq);const predictedDigit=priorFreq.findIndex(v=>v===highest);
-     matchesForecasts.push({target:predictedDigit,hit:digit===predictedDigit});
+     const modelPrediction=predictDigit(priorDigits);
+     const predictedDigit=modelPrediction?.digit;
+     if(predictedDigit!==null&&predictedDigit!==undefined)matchesForecasts.push({target:predictedDigit,hit:digit===predictedDigit});
      if(matchesForecasts.length>5000)matchesForecasts.shift();
     }
     samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5001)priceHistory.shift();
@@ -319,7 +340,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  // Keep the completed walk-forward record so rescans do not erase evidence.
  drawScan();
  document.getElementById('scanHeadline').textContent='YELLOW · Candidate refreshed';
- document.getElementById('scanReason').textContent='Candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts, so the accuracy record remains visible.';
+ document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read Deriv's internal digit generator.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
  counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
