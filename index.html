@@ -100,6 +100,9 @@ const counts=Array(10).fill(0);
 const digitHistory=[];
 const priceHistory=[];
 const scanCycleDigits=[];
+// Walk-forward forecasts: each forecast uses only ticks observed before its outcome.
+const matchesForecasts=[];
+let lastMatchesCandidate=null;
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
 const digitsEl=document.getElementById('digits');
@@ -166,34 +169,46 @@ function drawScan(){
  const sampleEl=document.getElementById('scanSample');
  const rateEl=document.getElementById('scanRate');
  const matchesEl=document.getElementById('scanMatches');
- const mode=document.getElementById('scanContract')?.value||'differs';
- const all=scanCycleDigits.slice();
- document.getElementById('scanReference').textContent=(mode==='matches'?'10%':'90%');
+ const mode=document.getElementById('scanContract')?.value||'matches';
+ const training=digitHistory.slice(-100);
+ const outcomes=matchesForecasts;
+ const n=outcomes.length;
+ const successes=mode==='matches'?outcomes.filter(x=>x.hit).length:outcomes.filter(x=>!x.hit).length;
+ const rate=n?successes/n:0;
+ const baseline=mode==='matches'?10:90;
+ // Wilson 95% lower confidence bound: avoid treating a tiny lucky sample as an edge.
+ const z=1.96;
+ const wilsonLower=n?((rate+z*z/(2*n)-z*Math.sqrt((rate*(1-rate)+z*z/(4*n))/n))/(1+z*z/n))*100:0;
+ document.getElementById('scanReference').textContent=baseline+'%';
  panel.classList.remove('scan-green','scan-red','scan-yellow');
- if(all.length<100){
+ if(training.length<100){
   panel.classList.add('scan-yellow');
-  headline.textContent='YELLOW · Insufficient data';
-  candidate.textContent='Rescan collecting: '+all.length+'/100 ticks';
-  sampleEl.textContent=Math.max(0,all.length-50)+' / 50 ticks';
+  headline.textContent='YELLOW · Building training sample';
+  candidate.textContent='Collecting '+training.length+'/100 ticks';
+  sampleEl.textContent=n+' forecast outcomes';
   rateEl.textContent='—';matchesEl.textContent='—';
-  reason.textContent='Collect 100 live ticks. The first 50 select a candidate digit; the next 50 check the selected MATCHES or DIFFERS rule on separate data.';
+  reason.textContent='The candidate will be selected from the latest 100 completed ticks. Each forecast is then checked against the next actual tick.';
   return;
  }
- const training=all.slice(0,50),validation=all.slice(50);
- const freq=Array(10).fill(0);training.forEach(d=>freq[d]++);
+ const freq=Array(10).fill(0);
+ training.forEach(d=>freq[d]++);
  const max=Math.max(...freq);
- const target=freq.findIndex(n=>n===max);
- const count=validation.filter(d=>mode==='matches'?d===target:d!==target).length;
- const rate=count/validation.length*100;
- const reference=mode==='matches'?10:90;
- const passed=mode==='matches'?rate>reference:rate>reference;
+ const target=freq.findIndex(x=>x===max);
+ lastMatchesCandidate=target;
+ candidate.textContent=mode.toUpperCase()+' '+target+' · candidate from last 100 ticks';
+ sampleEl.textContent=n+' forecast outcomes';
+ rateEl.textContent=n?rate.toFixed(1)+'%':'—';
+ matchesEl.textContent=n?successes+' / '+n:'—';
+ if(n<200){
+  panel.classList.add('scan-yellow');
+  headline.textContent='YELLOW · Accuracy not established';
+  reason.textContent='Walk-forward test: '+n+'/200 outcomes. Observed '+mode.toUpperCase()+' success rate '+(n?rate.toFixed(1)+'%':'not available')+'; reference '+baseline+'%. Need at least 200 forecasts and a 95% confidence lower bound above the reference before marking a signal as passed.';
+  return;
+ }
+ const passed=wilsonLower>baseline;
  panel.classList.add(passed?'scan-green':'scan-red');
- headline.textContent=passed?'GREEN · Passed this screen':'RED · Did not pass this screen';
- candidate.textContent='Historical candidate: '+mode.toUpperCase()+' '+target;
- sampleEl.textContent=validation.length+' ticks';
- rateEl.textContent=rate.toFixed(1)+'%';
- matchesEl.textContent=count+' / '+validation.length;
- reason.textContent='Digit '+target+' was selected as most frequent in the first 50 ticks ('+max+'/50). On the next 50 ticks, '+mode.toUpperCase()+' '+target+' occurred '+count+' times ('+rate.toFixed(1)+'%). The comparison reference is '+reference+'% for '+mode.toUpperCase()+'. '+(passed?'The observed rate exceeded the reference in this small sample.':'The observed rate did not exceed the reference in this sample.')+' This is a basic historical screen, not proof of an edge or a forecast for the next tick.';
+ headline.textContent=passed?'GREEN · Evidence above reference':'RED · No proven edge yet';
+ reason.textContent='Walk-forward evaluation using only prior ticks: '+successes+'/'+n+' '+mode.toUpperCase()+' outcomes ('+rate.toFixed(1)+'%). 95% Wilson lower bound: '+wilsonLower.toFixed(1)+'%; reference: '+baseline+'%. '+(passed?'The lower confidence bound exceeds the reference in this sample. Continue monitoring; past performance still cannot guarantee the next result.':'The evidence does not establish performance above the reference. A high raw hit rate alone is not enough.');
 }
 function drawTrend(){
  const recent=digitHistory.slice(-10);
@@ -265,6 +280,14 @@ function connectLive(){
     const digitMatch=price.match(/(\d)$/);
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
+    // Predict this tick using only the previous 100 ticks, then score against the actual digit.
+    const priorDigits=digitHistory.slice(-100);
+    if(priorDigits.length===100){
+     const priorFreq=Array(10).fill(0);priorDigits.forEach(d=>priorFreq[d]++);
+     const highest=Math.max(...priorFreq);const predictedDigit=priorFreq.findIndex(v=>v===highest);
+     matchesForecasts.push({target:predictedDigit,hit:digit===predictedDigit});
+     if(matchesForecasts.length>5000)matchesForecasts.shift();
+    }
     samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5001)priceHistory.shift();
     if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
     scanCycleDigits.push(digit);
@@ -293,14 +316,13 @@ function connectLive(){
 }
 document.getElementById('reconnect').addEventListener('click',connectLive);
 document.getElementById('rescan').addEventListener('click',()=>{
- scanCycleDigits.length=0;
+ // Keep the completed walk-forward record so rescans do not erase evidence.
  drawScan();
- document.getElementById('scanHeadline').textContent='YELLOW · New scan started';
- document.getElementById('scanCandidate').textContent='Collecting a fresh 100-tick sample';
- document.getElementById('scanReason').textContent='New scan started from the next live tick. The first 50 ticks choose a candidate; the following 50 evaluate it. This can take time on a slow feed.';
+ document.getElementById('scanHeadline').textContent='YELLOW · Candidate refreshed';
+ document.getElementById('scanReason').textContent='Candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts, so the accuracy record remains visible.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
