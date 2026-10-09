@@ -201,7 +201,8 @@ function drawDigitAudit(){
  set('auditVerdictNote',flagFreq&&flagTrans?'Both tests flagged at 1% level; confirm on fresh data':flagFreq?'Frequency test flagged; confirm on fresh data':flagTrans?'Transition test flagged; confirm on fresh data':'Neither test crossed the 1% screen');
  set('auditExplanation','Frequency p-value tests a uniform 10-digit distribution; transition p-value tests independence of adjacent digits. These tests assume the selected digit extraction is consistent. The 1% threshold reduces but does not eliminate false alarms. A result must repeat on fresh ticks and improve out-of-sample forecasts before it is considered potentially useful.');
 }
-\nfunction drawDigits(){
+
+function drawDigits(){
  digitsEl.innerHTML='';
  const selected=document.getElementById('windowSize')?.value||'50';
  const windowDigits=selected==='all'?digitHistory.slice():digitHistory.slice(-Number(selected));
