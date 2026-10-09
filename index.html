@@ -52,7 +52,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <footer>VictorPredict · Independent research tool · Trading involves risk</footer>
 <script>
 const SYMBOL='1HZ100V';
-const APP_ID=1089; // Deriv documented test app ID; registered ID format still needs confirmation.
 const counts=Array(10).fill(0);
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
@@ -86,7 +85,7 @@ function connectLive(){
  document.getElementById('signal').textContent='Collecting data';
  document.getElementById('confidence').textContent='No prediction; gathering live ticks';
  try{
-  socket=new WebSocket('wss://ws.derivws.com/websockets/v3?app_id='+APP_ID);
+  socket=new WebSocket('wss://api.derivws.com/trading/v1/options/ws/public');
   socket.onopen=()=>{
    reconnectAttempts=0;
    setConnection('Connected','Socket opened; checking server response');
