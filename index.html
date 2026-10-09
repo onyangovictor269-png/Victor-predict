@@ -19,6 +19,7 @@ button{background:var(--green);color:#062016;font-weight:750;border:0;cursor:poi
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}th,td{text-align:left;padding:10px 5px;border-bottom:1px solid var(--line)}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.bars{grid-template-columns:repeat(10,minmax(0,1fr))}}
+.prediction-panel{margin:16px 0;padding:20px;border:2px solid #38bdf8;border-radius:18px;background:linear-gradient(135deg,#082f49,#172554 65%,#312e81);box-shadow:0 0 0 2px #38bdf822,0 10px 28px #0005}.prediction-kicker{font-size:12px;font-weight:900;letter-spacing:1.2px;color:#7dd3fc}.prediction-panel h2{font-size:24px;line-height:1.2;margin:10px 0;color:#fff}.scan-candidate{display:inline-block;background:#facc15;color:#111827;padding:12px 16px;border-radius:12px;font-size:22px;font-weight:950;margin:4px 0 10px}.prediction-panel p{color:#e0f2fe;font-size:14px;line-height:1.5;margin:8px 0}.prediction-foot{margin-top:12px;padding-top:10px;border-top:1px solid #7dd3fc66;color:#fde68a;font-size:11px;font-weight:800;letter-spacing:.3px}@media(min-width:650px){.prediction-panel{padding:24px}.prediction-panel h2{font-size:30px}}
 </style>
 </head>
 <body>
@@ -31,6 +32,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="card"><div class="label">Last live digit</div><div class="value" id="last">—</div><div class="sub" id="lastPrice">Waiting for first live tick</div></div>
 <div class="card"><div class="label">Analysis</div><div class="value" id="signal">Collecting data</div><div class="sub" id="confidence">No prediction; gathering live ticks</div></div>
 </div>
+<section class="prediction-panel" aria-live="polite">
+<div class="prediction-kicker">LIVE SCAN RESULT · VISUAL CANDIDATE</div>
+<h2 id="scanHeadline">Scanning live digits…</h2>
+<div id="scanCandidate" class="scan-candidate">Waiting for 50 live ticks</div>
+<p id="scanReason">The scan will summarize the selected recent sample. It cannot reliably predict the next digit.</p>
+<div class="prediction-foot">RESEARCH ONLY · NOT A VERIFIED EDGE · DO NOT AUTO-TRADE FROM THIS LABEL</div>
+</section>
 <section class="card">
 <h3>Live digit frequency</h3>
 <div class="muted" id="freqNote">Counts and percentages will use real ticks received from Deriv during this browser session.</div>
@@ -96,6 +104,26 @@ function drawDigits(){
   el.innerHTML='<strong>'+d+'</strong><small>'+n+' · '+pct+'</small>';
   digitsEl.appendChild(el);
  });
+}
+function drawScan(){
+ const selected=document.getElementById('windowSize')?.value||'50';
+ const windowDigits=selected==='all'?digitHistory.slice():digitHistory.slice(-Number(selected));
+ const headline=document.getElementById('scanHeadline');
+ const candidate=document.getElementById('scanCandidate');
+ const reason=document.getElementById('scanReason');
+ if(windowDigits.length<50){
+  headline.textContent='Scanning live digits…';
+  candidate.textContent=windowDigits.length+'/50 ticks collected';
+  reason.textContent='Collect at least 50 live ticks before showing a historical candidate. Even then, past frequency is not a reliable next-digit prediction.';
+  return;
+ }
+ const freq=Array(10).fill(0);windowDigits.forEach(d=>freq[d]++);
+ const max=Math.max(...freq), leaders=freq.map((n,d)=>({n,d})).filter(x=>x.n===max).map(x=>x.d);
+ const min=Math.min(...freq), least=freq.map((n,d)=>({n,d})).filter(x=>x.n===min).map(x=>x.d);
+ const target=leaders[0], rare=least[0];
+ headline.textContent='Scan complete · historical pattern found';
+ candidate.textContent='Review candidate: DIFFERS '+target;
+ reason.textContent='In the selected '+windowDigits.length+'-tick sample, digit '+target+' appeared most often ('+max+'/'+windowDigits.length+', '+(max/windowDigits.length*100).toFixed(1)+'%). Least frequent digit(s): '+least.map(x=>x).join(', ')+'. This is a descriptive rule, not evidence that DIFFERS has an edge or a prediction of the next tick.';
 }
 function drawTrend(){
  const recent=digitHistory.slice(-10);
@@ -176,7 +204,7 @@ function connectLive(){
     setConnection('Connected','Receiving live ticks from Deriv');
     history.push({price,digit,time:new Date((tick.epoch||Math.floor(Date.now()/1000))*1000).toLocaleTimeString()});
     if(history.length>20)history.shift();
-    drawDigits();drawTrend();drawHistory();
+    drawDigits();drawTrend();drawScan();drawHistory();
    }
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
@@ -200,7 +228,7 @@ document.getElementById('clear').addEventListener('click',()=>{
  document.getElementById('confidence').textContent='Counts cleared; waiting for live ticks';
  document.getElementById('message').textContent='Session counts cleared. New counts will be based on live ticks received from Deriv.';
 });
-document.getElementById('windowSize').addEventListener('change',drawDigits);
+document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});
 document.getElementById('contract').addEventListener('change',updateSelectionNote);
 document.getElementById('target').addEventListener('change',updateSelectionNote);
 function updateSelectionNote(){
@@ -208,7 +236,7 @@ function updateSelectionNote(){
  const target=document.getElementById('target').value;
  document.getElementById('message').textContent='Analysis filter selected: '+(contract==='matches'?'Matches':'Differs')+' digit '+target+'. This is only a display setting; it does not create a prediction or place a trade.';
 }
-drawDigits();drawTrend();connectLive();
+drawDigits();drawTrend();drawScan();connectLive();
 </script>
 </body>
 </html>
