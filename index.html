@@ -33,9 +33,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="card"><div class="label">Analysis</div><div class="value" id="signal">Collecting data</div><div class="sub" id="confidence">No prediction; gathering live ticks</div></div>
 </div>
 <section class="prediction-panel" aria-live="polite">
-<div class="prediction-kicker">LIVE SCAN · HISTORICAL RULE CHECK</div>
+<div class="prediction-kicker">LIVE SCAN · MATCHES &amp; DIFFERS</div>
 <h2 id="scanHeadline">Collecting data…</h2>
 <div id="scanCandidate" class="scan-candidate">Waiting for 100 live ticks</div>
+<div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select></div>
 <div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed DIFFERS rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Matches in validation</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Reference rate</span><strong>90%*</strong></div></div>
 <p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
 <div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
@@ -114,6 +115,7 @@ function drawScan(){
  const sampleEl=document.getElementById('scanSample');
  const rateEl=document.getElementById('scanRate');
  const matchesEl=document.getElementById('scanMatches');
+ const mode=document.getElementById('scanContract')?.value||'differs';
  const all=digitHistory.slice(-100);
  panel.classList.remove('scan-green','scan-red','scan-yellow');
  if(all.length<100){
@@ -122,25 +124,24 @@ function drawScan(){
   candidate.textContent=all.length+'/100 live ticks';
   sampleEl.textContent=Math.max(0,all.length-50)+' / 50 ticks';
   rateEl.textContent='—';matchesEl.textContent='—';
-  reason.textContent='The scanner uses the first 50 ticks to select the most frequent digit, then checks DIFFERS on the next 50 ticks. Collect 100 live ticks to complete this basic split-sample screen.';
+  reason.textContent='Collect 100 live ticks. The first 50 select a candidate digit; the next 50 check the selected MATCHES or DIFFERS rule on separate data.';
   return;
  }
  const training=all.slice(0,50),validation=all.slice(50);
  const freq=Array(10).fill(0);training.forEach(d=>freq[d]++);
  const max=Math.max(...freq);
- const leaders=freq.map((n,d)=>({n,d})).filter(x=>x.n===max).map(x=>x.d);
- const target=leaders[0];
- const hits=validation.filter(d=>d!==target).length;
- const misses=validation.length-hits;
- const rate=hits/validation.length*100;
- const passed=rate>90;
+ const target=freq.findIndex(n=>n===max);
+ const count=validation.filter(d=>mode==='matches'?d===target:d!==target).length;
+ const rate=count/validation.length*100;
+ const reference=mode==='matches'?10:90;
+ const passed=mode==='matches'?rate>reference:rate>reference;
  panel.classList.add(passed?'scan-green':'scan-red');
  headline.textContent=passed?'GREEN · Passed this screen':'RED · Did not pass this screen';
- candidate.textContent='Historical candidate: DIFFERS '+target;
+ candidate.textContent='Historical candidate: '+mode.toUpperCase()+' '+target;
  sampleEl.textContent=validation.length+' ticks';
  rateEl.textContent=rate.toFixed(1)+'%';
- matchesEl.textContent=hits+' / '+validation.length;
- reason.textContent='Digit '+target+' was most frequent in the first 50 ticks ('+max+'/50). Applied unchanged to the next 50 ticks, DIFFERS occurred '+hits+' times and MATCHES '+misses+' times. '+(passed?'The observed rate exceeded the 90% reference in this small sample.':'The observed rate did not exceed the 90% reference in this sample.')+' This is a simple historical screen, not proof of a durable edge or a forecast for the next tick.';
+ matchesEl.textContent=count+' / '+validation.length;
+ reason.textContent='Digit '+target+' was selected as most frequent in the first 50 ticks ('+max+'/50). On the next 50 ticks, '+mode.toUpperCase()+' '+target+' occurred '+count+' times ('+rate.toFixed(1)+'%). The comparison reference is '+reference+'% for '+mode.toUpperCase()+'. '+(passed?'The observed rate exceeded the reference in this small sample.':'The observed rate did not exceed the reference in this sample.')+' This is a basic historical screen, not proof of an edge or a forecast for the next tick.';
 }
 function drawTrend(){
  const recent=digitHistory.slice(-10);
@@ -246,6 +247,7 @@ document.getElementById('clear').addEventListener('click',()=>{
  document.getElementById('message').textContent='Session counts cleared. New counts will be based on live ticks received from Deriv.';
 });
 document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});
+document.getElementById('scanContract').addEventListener('change',drawScan);
 document.getElementById('contract').addEventListener('change',updateSelectionNote);
 document.getElementById('target').addEventListener('change',updateSelectionNote);
 function updateSelectionNote(){
