@@ -47,6 +47,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <p class="muted" id="message">Waiting for live data. This is analysis only; the selection controls do not place or test trades.</p>
 </section>
 <section class="card" style="margin-top:14px">
+<h3>Live trend &amp; overdue-digit analysis</h3>
+<p class="muted">A short-window comparison of recent observed digits and how many ticks have passed since each digit last appeared. These are historical descriptions, not signals for the next outcome.</p>
+<div class="stats">
+<div class="stat"><span class="label">Recent 10 vs previous 10</span><strong id="trendSummary">Collecting data</strong></div>
+<div class="stat"><span class="label">Average digit · recent 10</span><strong id="recentAverage">—</strong></div>
+<div class="stat"><span class="label">Average digit · previous 10</span><strong id="previousAverage">—</strong></div>
+<div class="stat"><span class="label">Longest current gap</span><strong id="longestGap">—</strong></div>
+</div>
+<h4>Ticks since each digit last appeared</h4>
+<div class="bars" id="overdueDigits"></div>
+<p class="muted" id="trendCaveat">Collect at least 20 live ticks for a short-window comparison. A digit being absent longer does not make it more likely to appear next.</p>
+</section>
+<section class="card" style="margin-top:14px">
 <h3>Recent live ticks</h3>
 <div class="muted">Latest prices and last digits received from the public market feed; not trade outcomes.</div>
 <table><thead><tr><th>#</th><th>Price</th><th>Last digit</th><th>Time</th></tr></thead><tbody id="history"><tr><td colspan="4">Waiting for live ticks…</td></tr></tbody></table>
@@ -83,6 +96,33 @@ function drawDigits(){
   el.innerHTML='<strong>'+d+'</strong><small>'+n+' · '+pct+'</small>';
   digitsEl.appendChild(el);
  });
+}
+function drawTrend(){
+ const recent=digitHistory.slice(-10);
+ const previous=digitHistory.slice(-20,-10);
+ const average=a=>a.length?a.reduce((sum,d)=>sum+d,0)/a.length:null;
+ const ra=average(recent), pa=average(previous);
+ document.getElementById('recentAverage').textContent=ra===null?'—':ra.toFixed(2);
+ document.getElementById('previousAverage').textContent=pa===null?'—':pa.toFixed(2);
+ let trend='Collecting data';
+ if(recent.length===10&&previous.length===10){
+  const delta=ra-pa;
+  trend=Math.abs(delta)<0.5?'Roughly steady':delta>0?'Average digit higher':'Average digit lower';
+ }
+ document.getElementById('trendSummary').textContent=trend;
+ const overdue=document.getElementById('overdueDigits'); overdue.innerHTML='';
+ let longest={digit:null,gap:-1};
+ for(let d=0;d<10;d++){
+  let gap=0,found=false;
+  for(let i=digitHistory.length-1;i>=0;i--){if(digitHistory[i]===d){found=true;break;}gap++;}
+  if(!found)gap=digitHistory.length;
+  if(gap>longest.gap)longest={digit:d,gap};
+  const el=document.createElement('div');el.className='digit';
+  el.innerHTML='<strong>'+d+'</strong><small>'+(digitHistory.length?(found?gap+' ticks ago':'Not seen yet'):'—')+'</small>';
+  overdue.appendChild(el);
+ }
+ document.getElementById('longestGap').textContent=digitHistory.length?longest.digit+' · '+(longest.gap===digitHistory.length&&!digitHistory.includes(longest.digit)?'not seen yet':longest.gap+' ticks'):'—';
+ document.getElementById('trendCaveat').textContent=recent.length<10||previous.length<10?'Collect at least 20 live ticks for a short-window comparison. Overdue gaps need more observations to be informative.':'Compares the average digit in two consecutive 10-tick windows. Overdue counts are descriptive only; past gaps do not predict the next digit.';
 }
 function drawHistory(){
  const body=document.getElementById('history'); body.innerHTML='';
@@ -136,7 +176,7 @@ function connectLive(){
     setConnection('Connected','Receiving live ticks from Deriv');
     history.push({price,digit,time:new Date((tick.epoch||Math.floor(Date.now()/1000))*1000).toLocaleTimeString()});
     if(history.length>20)history.shift();
-    drawDigits();drawHistory();
+    drawDigits();drawTrend();drawHistory();
    }
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
@@ -153,7 +193,7 @@ function connectLive(){
 }
 document.getElementById('reconnect').addEventListener('click',connectLive);
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;history.length=0;drawDigits();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;history.length=0;drawDigits();drawTrend();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
@@ -168,7 +208,7 @@ function updateSelectionNote(){
  const target=document.getElementById('target').value;
  document.getElementById('message').textContent='Analysis filter selected: '+(contract==='matches'?'Matches':'Differs')+' digit '+target+'. This is only a display setting; it does not create a prediction or place a trade.';
 }
-drawDigits();connectLive();
+drawDigits();drawTrend();connectLive();
 </script>
 </body>
 </html>
