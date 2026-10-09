@@ -41,6 +41,24 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
 <div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
 </section>
+<section class="card" style="margin:16px 0;border:2px solid #38bdf8">
+<h3 style="margin-top:0">Live Signal Dashboard</h3>
+<p class="muted">Live rolling statistics calculated from the latest market ticks, inspired by common Deriv digit-analysis dashboards. These are historical rates, not guaranteed predictions.</p>
+<div class="controls"><label class="label" for="signalWindow" style="align-self:center">Signal window</label><select id="signalWindow"><option value="25">Last 25 ticks</option><option value="50" selected>Last 50 ticks</option><option value="100">Last 100 ticks</option><option value="250">Last 250 ticks</option></select></div>
+<div class="stats">
+<div class="stat"><span class="label">MATCHES · selected digit</span><strong id="sigMatches">—</strong><small class="muted" id="sigMatchesNote">Select digit below</small></div>
+<div class="stat"><span class="label">DIFFERS · selected digit</span><strong id="sigDiffers">—</strong><small class="muted" id="sigDiffersNote">Select digit below</small></div>
+<div class="stat"><span class="label">OVER 4 · last digit 5–9</span><strong id="sigOver">—</strong><small class="muted">Reference: 50%*</small></div>
+<div class="stat"><span class="label">UNDER 5 · last digit 0–4</span><strong id="sigUnder">—</strong><small class="muted">Reference: 50%*</small></div>
+<div class="stat"><span class="label">EVEN · last digit</span><strong id="sigEven">—</strong><small class="muted">Reference: 50%*</small></div>
+<div class="stat"><span class="label">ODD · last digit</span><strong id="sigOdd">—</strong><small class="muted">Reference: 50%*</small></div>
+<div class="stat"><span class="label">RISE · price up vs prior tick</span><strong id="sigRise">—</strong><small class="muted">Price direction</small></div>
+<div class="stat"><span class="label">FALL · price down vs prior tick</span><strong id="sigFall">—</strong><small class="muted">Price direction</small></div>
+</div>
+<div class="controls"><label class="label" for="signalDigit" style="align-self:center">Matches/Differs digit</label><select id="signalDigit"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select><button id="signalRefresh" type="button">Refresh analysis</button></div>
+<p class="muted" id="signalSummary">Waiting for live ticks. Signal rates will appear as enough market data arrives.</p>
+<p class="muted">*50% parity and Over/Under references assume evenly distributed last digits. Actual outcomes can differ. Rise/Fall excludes unchanged prices. No displayed rate predicts the next outcome or establishes profitability.</p>
+</section>
 <section class="card">
 <h3>Live digit frequency</h3>
 <div class="muted" id="freqNote">Counts and percentages will use real ticks received from Deriv during this browser session.</div>
@@ -79,7 +97,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <script>
 const SYMBOL='1HZ100V';
 const counts=Array(10).fill(0);
-const digitHistory=[];
+const digitHistory=[];\nconst priceHistory=[];
 const scanCycleDigits=[];
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
@@ -107,6 +125,37 @@ function drawDigits(){
   el.innerHTML='<strong>'+d+'</strong><small>'+n+' · '+pct+'</small>';
   digitsEl.appendChild(el);
  });
+}
+function drawSignalDashboard(){
+ const n=Number(document.getElementById('signalWindow')?.value||50);
+ const ds=digitHistory.slice(-n);
+ const ps=priceHistory.slice(-n-1);
+ const target=Number(document.getElementById('signalDigit')?.value||0);
+ const pct=(count,total)=>total?((count/total)*100).toFixed(1)+'%':'—';
+ const matches=ds.filter(d=>d===target).length;
+ const differs=ds.length-matches;
+ const over=ds.filter(d=>d>=5).length;
+ const under=ds.filter(d=>d<5).length;
+ const even=ds.filter(d=>d%2===0).length;
+ const odd=ds.length-even;
+ let rises=0,falls=0,moves=0;
+ for(let i=1;i<ps.length;i++){
+  if(ps[i]>ps[i-1]){rises++;moves++;}
+  else if(ps[i]<ps[i-1]){falls++;moves++;}
+ }
+ document.getElementById('sigMatches').textContent=pct(matches,ds.length);
+ document.getElementById('sigMatchesNote').textContent=matches+' of '+ds.length+' ticks were digit '+target;
+ document.getElementById('sigDiffers').textContent=pct(differs,ds.length);
+ document.getElementById('sigDiffersNote').textContent=differs+' of '+ds.length+' ticks were not digit '+target;
+ document.getElementById('sigOver').textContent=pct(over,ds.length);
+ document.getElementById('sigUnder').textContent=pct(under,ds.length);
+ document.getElementById('sigEven').textContent=pct(even,ds.length);
+ document.getElementById('sigOdd').textContent=pct(odd,ds.length);
+ document.getElementById('sigRise').textContent=pct(rises,moves);
+ document.getElementById('sigFall').textContent=pct(falls,moves);
+ document.getElementById('signalSummary').textContent=ds.length<25
+  ? 'Collecting data: '+ds.length+'/'+Math.min(n,25)+' ticks available. Results are more informative with a larger sample.'
+  : 'Showing observed rates from the latest '+ds.length+' ticks. Rise/Fall uses '+moves+' price changes; unchanged prices are excluded. These are backward-looking statistics, not next-tick forecasts.';
 }
 function drawScan(){
  const panel=document.querySelector('.prediction-panel');
@@ -215,7 +264,7 @@ function connectLive(){
     const digitMatch=price.match(/(\d)$/);
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
-    samples++;counts[digit]++;digitHistory.push(digit);if(digitHistory.length>5000)digitHistory.shift();
+    samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5001)priceHistory.shift();
     if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
     scanCycleDigits.push(digit);
     document.getElementById('last').textContent=digit;
@@ -226,7 +275,7 @@ function connectLive(){
     setConnection('Connected','Receiving live ticks from Deriv');
     history.push({price,digit,time:new Date((tick.epoch||Math.floor(Date.now()/1000))*1000).toLocaleTimeString()});
     if(history.length>20)history.shift();
-    drawDigits();drawTrend();drawScan();drawHistory();
+    drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
    }
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
@@ -250,14 +299,14 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='New scan started from the next live tick. The first 50 ticks choose a candidate; the following 50 evaluate it. This can take time on a slow feed.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;scanCycleDigits.length=0;history.length=0;drawDigits();drawTrend();drawScan();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
  document.getElementById('confidence').textContent='Counts cleared; waiting for live ticks';
  document.getElementById('message').textContent='Session counts cleared. New counts will be based on live ticks received from Deriv.';
 });
-document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});
+document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});\ndocument.getElementById('signalWindow').addEventListener('change',drawSignalDashboard);\ndocument.getElementById('signalDigit').addEventListener('change',drawSignalDashboard);\ndocument.getElementById('signalRefresh').addEventListener('click',drawSignalDashboard);
 document.getElementById('scanContract').addEventListener('change',drawScan);
 document.getElementById('contract').addEventListener('change',updateSelectionNote);
 document.getElementById('target').addEventListener('change',updateSelectionNote);
@@ -266,7 +315,7 @@ function updateSelectionNote(){
  const target=document.getElementById('target').value;
  document.getElementById('message').textContent='Analysis filter selected: '+(contract==='matches'?'Matches':'Differs')+' digit '+target+'. This is only a display setting; it does not create a prediction or place a trade.';
 }
-drawDigits();drawTrend();drawScan();connectLive();
+drawDigits();drawTrend();drawScan();drawSignalDashboard();connectLive();
 </script>
 </body>
 </html>
