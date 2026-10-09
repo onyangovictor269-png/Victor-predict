@@ -114,7 +114,81 @@ const history=[];
 const digitsEl=document.getElementById('digits');
 const connectionEl=document.getElementById('connection');
 const connectionNote=document.getElementById('connectionNote');
-function drawDigits(){
+
+function auditGammaQ(a,x){
+ if(!(x>=0)||!(a>0))return NaN;
+ if(x===0)return 1;
+ const gln=Math.log;
+ let logGamma;
+ const cof=[676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.13857109526572012,9.984369578019572e-6,1.5056327351493116e-7];
+ function lg(z){
+  if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-lg(1-z);
+  z-=1;let s=0.99999999999980993;
+  for(let i=0;i<cof.length;i++)s+=cof[i]/(z+i+1);
+  const t=z+cof.length-0.5;
+  return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(s);
+ }
+ logGamma=lg(a);
+ if(x<a+1){
+  let ap=a,sum=1/a,del=sum;
+  for(let n=1;n<=200;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-14)break;}
+  const p=sum*Math.exp(-x+a*Math.log(x)-logGamma);
+  return Math.max(0,Math.min(1,1-p));
+ }
+ let b=x+1-a,c=1e300,d=1/b,h=d;
+ for(let i=1;i<=200;i++){
+  const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const delta=d*c;h*=delta;if(Math.abs(delta-1)<1e-14)break;
+ }
+ return Math.max(0,Math.min(1,Math.exp(-x+a*Math.log(x)-logGamma)*h));
+}
+function auditPText(p){return p<0.0001?'<0.0001':p.toFixed(4);}
+function drawDigitAudit(){
+ const ds=digitHistory;
+ const n=ds.length;
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ set('auditN',n+' ticks');
+ if(n<1000){
+  set('auditFreqP','Need '+(1000-n)+' more');
+  set('auditTransP','Need '+(1000-n)+' more');
+  set('auditRepeat','—');set('auditTopDigit','—');set('auditVerdict','Collecting ticks');
+  set('auditFreqNote','Minimum 1,000 ticks for initial screen');
+  set('auditTransNote','Minimum 1,000 ticks for initial screen');
+  set('auditRepeatNote','Uniform independent reference: 10%');
+  set('auditTopNote','Observed frequency only');
+  set('auditVerdictNote','Do not infer a pattern from a small sample');
+  return;
+ }
+ const freq=Array(10).fill(0);
+ for(const d of ds)freq[d]++;
+ const expected=n/10;
+ const chi=freq.reduce((s,k)=>s+(k-expected)*(k-expected)/expected,0);
+ const freqP=auditGammaQ(9/2,chi/2);
+ let pairs=0,repeats=0;
+ const matrix=Array.from({length:10},()=>Array(10).fill(0));
+ const row=Array(10).fill(0),col=Array(10).fill(0);
+ for(let i=1;i<n;i++){const a=ds[i-1],b=ds[i];matrix[a][b]++;row[a]++;col[b]++;pairs++;if(a===b)repeats++;}
+ let transChi=0;
+ for(let a=0;a<10;a++)for(let b=0;b<10;b++){
+  const e=row[a]*col[b]/pairs;
+  if(e>0)transChi+=(matrix[a][b]-e)*(matrix[a][b]-e)/e;
+ }
+ const transP=auditGammaQ(81/2,transChi/2);
+ const repeatRate=repeats/pairs*100;
+ const top=Math.max(...freq),leaders=freq.map((v,i)=>({v,i})).filter(x=>x.v===top).map(x=>x.i);
+ set('auditFreqP',auditPText(freqP));
+ set('auditFreqNote','χ²='+chi.toFixed(1)+' · 9 degrees of freedom');
+ set('auditTransP',auditPText(transP));
+ set('auditTransNote','χ²='+transChi.toFixed(1)+' · 81 degrees of freedom');
+ set('auditRepeat',repeatRate.toFixed(2)+'%');
+ set('auditRepeatNote',repeats+' repeats in '+pairs+' adjacent pairs · 10% reference');
+ set('auditTopDigit',leaders.join(', ')+' · '+(top/n*100).toFixed(2)+'%');
+ set('auditTopNote',top+' appearances; uniform reference '+expected.toFixed(1));
+ const flagFreq=freqP<0.01,flagTrans=transP<0.01;
+ set('auditVerdict',flagFreq||flagTrans?'Potential anomaly':'No strong anomaly');
+ set('auditVerdictNote',flagFreq&&flagTrans?'Both tests flagged at 1% level; confirm on fresh data':flagFreq?'Frequency test flagged; confirm on fresh data':flagTrans?'Transition test flagged; confirm on fresh data':'Neither test crossed the 1% screen');
+ set('auditExplanation','Frequency p-value tests a uniform 10-digit distribution; transition p-value tests independence of adjacent digits. These tests assume the selected digit extraction is consistent. The 1% threshold reduces but does not eliminate false alarms. A result must repeat on fresh ticks and improve out-of-sample forecasts before it is considered potentially useful.');
+}
+\nfunction drawDigits(){
  digitsEl.innerHTML='';
  const selected=document.getElementById('windowSize')?.value||'50';
  const windowDigits=selected==='all'?digitHistory.slice():digitHistory.slice(-Number(selected));
@@ -361,7 +435,7 @@ function connectLive(){
     setConnection('Connected','Receiving live ticks from Deriv');
     history.push({price,digit,time:new Date((tick.epoch||Math.floor(Date.now()/1000))*1000).toLocaleTimeString()});
     if(history.length>20)history.shift();
-    drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
+    drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
    }
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
@@ -384,7 +458,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
