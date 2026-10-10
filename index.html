@@ -556,7 +556,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;comparisonResults.earlier.length=0;comparisonResults.upgraded.length=0;pendingForecast=null;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;comparisonResults.earlier.length=0;comparisonResults.upgraded.length=0;pendingForecast=null;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawModelComparison();drawSignalDashboard();drawDigitAudit();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
@@ -580,7 +580,7 @@ restoreStoredTicks();
 // Start the public feed before optional dashboard rendering, so a UI rendering error cannot block connection.
 connectLive();
 try {
- drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
+ drawDigits();drawTrend();drawScan();drawModelComparison();drawSignalDashboard();drawDigitAudit();drawHistory();
 } catch (e) {
  setConnection('Connecting…','Feed started; dashboard rendering error: '+(e&&e.message?e.message:'unknown error'));
  console.error('VictorPredict dashboard startup error',e);
