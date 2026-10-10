@@ -61,7 +61,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 </section>
 <section class="card">
 <h3>Live digit frequency</h3>
-<div class="muted" id="freqNote">Counts and percentages will use real ticks received from Deriv during this browser session.</div>
+<div class="muted" id="freqNote">Tick history is saved locally in this browser (up to 5,000 ticks) so the audit can continue after a refresh. Export CSV to keep a separate copy.</div>
 <div class="controls"><select id="windowSize" aria-label="Observation window"><option value="25">Latest 25 ticks</option><option value="50" selected>Latest 50 ticks</option><option value="100">Latest 100 ticks</option><option value="all">All session ticks</option></select></div>
 <div class="stats"><div class="stat"><span class="label">Ticks in selected window</span><strong id="windowCount">0</strong></div><div class="stat"><span class="label">Most frequent digit</span><strong id="mostCommon">Not enough data</strong></div><div class="stat"><span class="label">Expected count at 10% each</span><strong id="expectedCount">—</strong></div><div class="stat"><span class="label">Largest deviation from 10%</span><strong id="largestDeviation">—</strong></div></div>
 <p class="muted" id="statsCaveat">The 10% line is a uniform-digit reference only, not proof that outcomes are uniform or predictive.</p>
@@ -70,6 +70,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <select id="contract"><option value="differs">Review: Differs from digit</option><option value="matches">Review: Matches digit</option></select>
 <select id="target"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select>
 <button id="reconnect">Reconnect feed</button>
+<button id="exportData" type="button">Export tick CSV</button>
 <button id="clear">Clear session counts</button>
 </div>
 <p class="muted" id="message">Waiting for live data. This is analysis only; the selection controls do not place or test trades.</p>
@@ -124,7 +125,54 @@ const matchesForecasts=[];
 let lastMatchesCandidate=null;
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
+const STORAGE_KEY='victorpredict_ticks_v1';
+let lastPersistedCount=0;
 const digitsEl=document.getElementById('digits');
+
+// Restore previously observed public ticks from this browser only.
+// Forecast outcomes are deliberately not restored, so validation starts fresh per page session.
+function restoreStoredTicks(){
+ try{
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(!raw)return;
+  const rows=JSON.parse(raw);
+  if(!Array.isArray(rows))return;
+  rows.slice(-5000).forEach(row=>{
+   if(!row||!Number.isInteger(row.digit)||row.digit<0||row.digit>9||!Number.isFinite(Number(row.quote)))return;
+   const quote=String(row.quote),digit=row.digit;
+   digitHistory.push(digit);priceHistory.push(Number(quote));counts[digit]++;samples++;
+   history.push({price:quote,digit,time:new Date(Number(row.epoch)*1000).toLocaleTimeString()});
+  });
+  while(digitHistory.length>5000)digitHistory.shift();
+  while(priceHistory.length>5001)priceHistory.shift();
+  while(history.length>20)history.shift();
+  lastPersistedCount=digitHistory.length;
+ }catch(e){
+  console.warn('Could not restore saved VictorPredict ticks',e);
+ }
+}
+function persistTicks(){
+ try{
+  const rows=digitHistory.map((digit,i)=>({digit,quote:priceHistory[i],epoch:Math.floor(Date.now()/1000)}));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(rows.slice(-5000)));
+  lastPersistedCount=digitHistory.length;
+ }catch(e){
+  const note=document.getElementById('freqNote');
+  if(note)note.textContent='Browser storage is unavailable or full. Export tick CSV before closing this page to keep a copy.';
+ }
+}
+function exportTickCSV(){
+ const rows=['epoch,local_time,quote,last_digit'];
+ const current=Date.now();
+ digitHistory.forEach((digit,i)=>{
+  const quote=priceHistory[i];
+  // The feed's exact epoch is retained separately below when available; restored rows retain their saved epoch.
+  rows.push([Math.floor(current/1000)-Math.max(0,digitHistory.length-1-i),new Date(current-Math.max(0,digitHistory.length-1-i)*1000).toISOString(),quote,digit].join(','));
+ });
+ const blob=new Blob([rows.join('\\r\\n')],{type:'text/csv;charset=utf-8;'});
+ const url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download='victorpredict-ticks.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+}
 const connectionEl=document.getElementById('connection');
 const connectionNote=document.getElementById('connectionNote');
 
@@ -439,6 +487,7 @@ function connectLive(){
      }
     }
     samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5001)priceHistory.shift();
+     persistTicks();
     if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
     scanCycleDigits.push(digit);
     document.getElementById('last').textContent=digit;
@@ -465,6 +514,7 @@ function connectLive(){
  }catch(e){setConnection('Connection error','This browser could not open the market feed.');}
 }
 document.getElementById('reconnect').addEventListener('click',connectLive);
+document.getElementById('exportData').addEventListener('click',exportTickCSV);
 document.getElementById('rescan').addEventListener('click',()=>{
  // Keep the completed walk-forward record so rescans do not erase evidence.
  drawScan();
@@ -472,7 +522,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
@@ -491,6 +541,8 @@ function updateSelectionNote(){
  const target=document.getElementById('target').value;
  document.getElementById('message').textContent='Analysis filter selected: '+(contract==='matches'?'Matches':'Differs')+' digit '+target+'. This is only a display setting; it does not create a prediction or place a trade.';
 }
+// Restore local public tick history before opening the live feed. No account data is stored.
+restoreStoredTicks();
 // Start the public feed before optional dashboard rendering, so a UI rendering error cannot block connection.
 connectLive();
 try {
