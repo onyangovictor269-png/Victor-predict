@@ -317,34 +317,37 @@ function mostLikely(counts){
 }
 function predictDigit(priorDigits){
  if(priorDigits.length<100)return null;
- const long=priorDigits.slice(-100), recent=priorDigits.slice(-25);
- const longCounts=Array(10).fill(1), recentCounts=Array(10).fill(1), transition=Array(10).fill(1);
+ // Larger history reduces the influence of tiny random streaks.
+ const long=priorDigits.slice(-500), recent=priorDigits.slice(-100), short=priorDigits.slice(-25);
+ const longCounts=Array(10).fill(1), recentCounts=Array(10).fill(1), shortCounts=Array(10).fill(1), transition=Array(10).fill(1);
  long.forEach(d=>longCounts[d]++);
  recent.forEach(d=>recentCounts[d]++);
+ short.forEach(d=>shortCounts[d]++);
+ const previous=long[long.length-1];
  let transitionN=0;
  for(let i=0;i<long.length-1;i++){
-  if(long[i]===long[long.length-1]){transition[long[i+1]]++;transitionN++;}
+  if(long[i]===previous){transition[long[i+1]]++;transitionN++;}
  }
  const normalize=a=>{const total=a.reduce((s,v)=>s+v,0);return a.map(v=>v/total);};
- const lp=normalize(longCounts), rp=normalize(recentCounts), tp=normalize(transition);
- const tw=Math.min(0.25,transitionN/(transitionN+20)*0.25);
- const lw=0.45, rw=0.55-tw;
- const ensemble=lp.map((v,i)=>lw*v+rw*rp[i]+tw*tp[i]);
+ const lp=normalize(longCounts), rp=normalize(recentCounts), sp=normalize(shortCounts), tp=normalize(transition);
+ // Keep transition influence small unless many comparable transitions were observed.
+ const tw=transitionN>=8?Math.min(0.12,(transitionN/(transitionN+40))*0.12):0;
+ const ensemble=lp.map((v,i)=>(0.55-tw)*v+0.33*rp[i]+0.12*sp[i]+tw*tp[i]);
  const candidates={
   'Long frequency':mostLikely(longCounts),
   'Recent frequency':mostLikely(recentCounts),
-  'Last-digit transition':mostLikely(transition),
+  'Last-digit transition':transitionN>=8?mostLikely(transition):mostLikely(recentCounts),
   'Weighted ensemble':mostLikely(ensemble),
-  'Repeat last digit':long[long.length-1]
+  'Repeat last digit':previous
  };
- // Require at least 50 scored forecasts per method; shrink each rate toward the 10% reference.
+ // Avoid rapidly switching models based on a small lucky streak.
  let selected='Weighted ensemble', bestScore=-Infinity;
  for(const name of MODEL_NAMES){
   const outcomes=modelResults[name];
-  if(outcomes.length<50)continue;
-  const recentOutcomes=outcomes.slice(-200);
+  if(outcomes.length<200)continue;
+  const recentOutcomes=outcomes.slice(-500);
   const hits=recentOutcomes.reduce((sum,x)=>sum+(x?1:0),0);
-  const score=(hits+10)/(recentOutcomes.length+100);
+  const score=(hits+20)/(recentOutcomes.length+200);
   if(score>bestScore){bestScore=score;selected=name;}
  }
  return {digit:candidates[selected], selectedModel:selected, candidates, transitionSamples:transitionN};
