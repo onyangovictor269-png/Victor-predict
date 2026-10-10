@@ -39,6 +39,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select><button id="rescan">Rescan now</button></div>
 <div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed success rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Successful outcomes</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Recent 100 forecasts</span><strong id="scanRecent">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
 <p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
+<div class="card" style="margin-top:12px;background:#10182a"><h3 style="margin-top:0">Fair model comparison</h3><p class="muted">Both methods are frozen before the next tick arrives and scored against that same next tick.</p><div class="stats"><div class="stat"><span class="label">Earlier weighted method</span><strong id="compareEarlier">—</strong><small class="muted" id="compareEarlierN">0 forecasts</small></div><div class="stat"><span class="label">Upgraded adaptive method</span><strong id="compareUpgraded">—</strong><small class="muted" id="compareUpgradedN">0 forecasts</small></div></div><p class="muted" id="compareNote">Need new live forecasts to compare both methods fairly.</p></div>
 <div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
 </section>
 <section class="card" style="margin:16px 0;border:2px solid #38bdf8">
@@ -123,6 +124,7 @@ const epochHistory=[];
 const scanCycleDigits=[];
 // Walk-forward forecasts: each forecast uses only ticks observed before its outcome.
 const matchesForecasts=[];
+const comparisonResults={earlier:[],upgraded:[]};
 let lastMatchesCandidate=null;
 // Hold each forecast until the following live tick arrives.
 let pendingForecast=null;
@@ -315,6 +317,19 @@ function mostLikely(counts){
  for(let i=1;i<counts.length;i++)if(counts[i]>counts[best])best=i;
  return best;
 }
+function predictEarlierDigit(priorDigits){
+ if(priorDigits.length<100)return null;
+ const long=priorDigits.slice(-100), recent=priorDigits.slice(-25);
+ const longCounts=Array(10).fill(1), recentCounts=Array(10).fill(1), transition=Array(10).fill(1);
+ long.forEach(d=>longCounts[d]++);recent.forEach(d=>recentCounts[d]++);
+ let transitionN=0;const previous=long[long.length-1];
+ for(let i=0;i<long.length-1;i++){if(long[i]===previous){transition[long[i+1]]++;transitionN++;}}
+ const normalize=a=>{const total=a.reduce((s,v)=>s+v,0);return a.map(v=>v/total);};
+ const lp=normalize(longCounts),rp=normalize(recentCounts),tp=normalize(transition);
+ const tw=Math.min(0.25,transitionN/(transitionN+20)*0.25),lw=0.45,rw=0.55-tw;
+ const ensemble=lp.map((v,i)=>lw*v+rw*rp[i]+tw*tp[i]);
+ return mostLikely(ensemble);
+}
 function predictDigit(priorDigits){
  if(priorDigits.length<100)return null;
  // Larger history reduces the influence of tiny random streaks.
@@ -350,7 +365,20 @@ function predictDigit(priorDigits){
   const score=(hits+20)/(recentOutcomes.length+200);
   if(score>bestScore){bestScore=score;selected=name;}
  }
- return {digit:candidates[selected], selectedModel:selected, candidates, transitionSamples:transitionN};
+ return {digit:candidates[selected], selectedModel:selected, candidates, transitionSamples:transitionN, earlierDigit:predictEarlierDigit(priorDigits)};
+}
+function drawModelComparison(){
+ const earlier=comparisonResults.earlier, upgraded=comparisonResults.upgraded;
+ const hitCount=a=>a.reduce((n,x)=>n+(x?1:0),0);
+ const eHits=hitCount(earlier),uHits=hitCount(upgraded);
+ const eRate=earlier.length?eHits/earlier.length*100:null;
+ const uRate=upgraded.length?uHits/upgraded.length*100:null;
+ document.getElementById('compareEarlier').textContent=eRate===null?'—':eRate.toFixed(1)+'%';
+ document.getElementById('compareUpgraded').textContent=uRate===null?'—':uRate.toFixed(1)+'%';
+ document.getElementById('compareEarlierN').textContent=eHits+' / '+earlier.length+' forecasts';
+ document.getElementById('compareUpgradedN').textContent=uHits+' / '+upgraded.length+' forecasts';
+ const n=Math.min(earlier.length,upgraded.length);
+ document.getElementById('compareNote').textContent=n<200?'Collect at least 200 matched forecasts before judging which method is better. MATCHES reference is 10%; raw results can fluctuate.':'Matched sample: '+n+' forecasts. Difference (upgraded minus earlier): '+((uRate-eRate)>=0?'+':'')+(uRate-eRate).toFixed(1)+' percentage points. This is evidence for comparison, not proof of future edge.';
 }
 function drawScan(){
  const panel=document.querySelector('.prediction-panel');
@@ -485,7 +513,11 @@ function connectLive(){
       if(modelResults[name].length>5000)modelResults[name].shift();
      }
      matchesForecasts.push({target:pendingForecast.digit,hit:digit===pendingForecast.digit,model:pendingForecast.selectedModel});
+     comparisonResults.earlier.push(pendingForecast.earlierDigit===digit);
+     comparisonResults.upgraded.push(pendingForecast.digit===digit);
      if(matchesForecasts.length>5000)matchesForecasts.shift();
+     if(comparisonResults.earlier.length>5000)comparisonResults.earlier.shift();
+     if(comparisonResults.upgraded.length>5000)comparisonResults.upgraded.shift();
     }
     samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));epochHistory.push(Number(tick.epoch)||Math.floor(Date.now()/1000));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5000)priceHistory.shift();if(epochHistory.length>5000)epochHistory.shift();
     pendingForecast=digitHistory.length>=100?predictDigit(digitHistory.slice(-100)):null;
@@ -500,7 +532,7 @@ function connectLive(){
     setConnection('Connected','Receiving live ticks from Deriv');
     history.push({price,digit,time:new Date((tick.epoch||Math.floor(Date.now()/1000))*1000).toLocaleTimeString()});
     if(history.length>20)history.shift();
-    drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
+    drawDigits();drawTrend();drawScan();drawModelComparison();drawSignalDashboard();drawDigitAudit();drawHistory();
    }
   };
   socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
@@ -524,7 +556,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;pendingForecast=null;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;comparisonResults.earlier.length=0;comparisonResults.upgraded.length=0;pendingForecast=null;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
