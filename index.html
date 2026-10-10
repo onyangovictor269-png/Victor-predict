@@ -124,6 +124,8 @@ const scanCycleDigits=[];
 // Walk-forward forecasts: each forecast uses only ticks observed before its outcome.
 const matchesForecasts=[];
 let lastMatchesCandidate=null;
+// Hold each forecast until the following live tick arrives.
+let pendingForecast=null;
 let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
 const history=[];
 const STORAGE_KEY='victorpredict_ticks_v1';
@@ -381,12 +383,12 @@ function drawScan(){
   reason.textContent='The adaptive model combines the latest 100-tick frequency, the latest 25-tick frequency, and recent digit transitions. Each forecast is scored against the next actual tick; no hidden Deriv generator data is accessed.';
   return;
  }
- const prediction=predictDigit(training);
+ const prediction=pendingForecast;
  const target=prediction?prediction.digit:null;
- if(target===null){candidate.textContent='Collecting model data';return;}
+ if(target===null){candidate.textContent='Preparing next-tick forecast';return;}
  lastMatchesCandidate=target;
- const currentModel=predictDigit(training)?.selectedModel||'Weighted ensemble';
- candidate.textContent=mode.toUpperCase()+' '+target+' · '+currentModel;
+ const currentModel=prediction.selectedModel||'Weighted ensemble';
+ candidate.textContent='NEXT TICK · '+mode.toUpperCase()+' '+target+' · '+currentModel;
  sampleEl.textContent=n+' forecast outcomes';
  rateEl.textContent=n?(rate*100).toFixed(1)+'%':'—';
  matchesEl.textContent=n?successes+' / '+n:'—';
@@ -473,21 +475,17 @@ function connectLive(){
     const digitMatch=price.match(/(\d)$/);
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
-    // Select using past model scores, then score each candidate against this new tick.
-    const priorDigits=digitHistory.slice(-100);
-    if(priorDigits.length===100){
-     const modelPrediction=predictDigit(priorDigits);
-     if(modelPrediction){
-      for(const name of MODEL_NAMES){
-       modelResults[name].push(modelPrediction.candidates[name]===digit);
-       if(modelResults[name].length>5000)modelResults[name].shift();
-      }
-      const predictedDigit=modelPrediction.digit;
-      matchesForecasts.push({target:predictedDigit,hit:digit===predictedDigit,model:modelPrediction.selectedModel});
-      if(matchesForecasts.length>5000)matchesForecasts.shift();
+    // Score the forecast that was displayed before this tick arrived.
+    if(pendingForecast){
+     for(const name of MODEL_NAMES){
+      modelResults[name].push(pendingForecast.candidates[name]===digit);
+      if(modelResults[name].length>5000)modelResults[name].shift();
      }
+     matchesForecasts.push({target:pendingForecast.digit,hit:digit===pendingForecast.digit,model:pendingForecast.selectedModel});
+     if(matchesForecasts.length>5000)matchesForecasts.shift();
     }
     samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));epochHistory.push(Number(tick.epoch)||Math.floor(Date.now()/1000));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5000)priceHistory.shift();if(epochHistory.length>5000)epochHistory.shift();
+    pendingForecast=digitHistory.length>=100?predictDigit(digitHistory.slice(-100)):null;
      persistTicks();
     if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
     scanCycleDigits.push(digit);
@@ -523,7 +521,7 @@ document.getElementById('rescan').addEventListener('click',()=>{
  document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
 });
 document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
+ counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;pendingForecast=null;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawSignalDashboard();drawDigitAudit();drawHistory();
  document.getElementById('last').textContent='—';
  document.getElementById('lastPrice').textContent='Waiting for first live tick';
  document.getElementById('signal').textContent='Collecting data';
