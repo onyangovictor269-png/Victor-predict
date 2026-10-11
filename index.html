@@ -62,12 +62,14 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div class="stat"><span class="label">DIFFERS · selected digit</span><strong id="sigDiffers">—</strong><small class="muted" id="sigDiffersNote">Select digit below</small></div>
 <div class="stat"><span class="label">OVER 4 · last digit 5–9</span><strong id="sigOver">—</strong><small class="muted">Reference: 50%*</small></div>
 <div class="stat"><span class="label">UNDER 5 · last digit 0–4</span><strong id="sigUnder">—</strong><small class="muted">Reference: 50%*</small></div>
+<div class="stat"><span class="label">HIGHER · above barrier</span><strong id="sigHigher">—</strong><small class="muted" id="sigHigherNote">Choose barrier below</small></div>
+<div class="stat"><span class="label">LOWER · below barrier</span><strong id="sigLower">—</strong><small class="muted" id="sigLowerNote">Choose barrier below</small></div>
 <div class="stat"><span class="label">EVEN · last digit</span><strong id="sigEven">—</strong><small class="muted">Reference: 50%*</small></div>
 <div class="stat"><span class="label">ODD · last digit</span><strong id="sigOdd">—</strong><small class="muted">Reference: 50%*</small></div>
 <div class="stat"><span class="label">RISE · price up vs prior tick</span><strong id="sigRise">—</strong><small class="muted">Price direction</small></div>
 <div class="stat"><span class="label">FALL · price down vs prior tick</span><strong id="sigFall">—</strong><small class="muted">Price direction</small></div>
 </div>
-<div class="controls"><label class="label" for="signalDigit" style="align-self:center">Matches/Differs digit</label><select id="signalDigit"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select><button id="signalRefresh" type="button">Refresh analysis</button></div>
+<div class="controls"><label class="label" for="signalDigit" style="align-self:center">Matches/Differs digit</label><select id="signalDigit"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select><label class="label" for="signalBarrier" style="align-self:center">Higher/Lower barrier</label><select id="signalBarrier"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select><button id="signalRefresh" type="button">Refresh analysis</button></div>
 <p class="muted" id="signalSummary">Waiting for live ticks. Signal rates will appear as enough market data arrives.</p>
 <p class="muted">*50% parity and Over/Under references assume evenly distributed last digits. Actual outcomes can differ. Rise/Fall excludes unchanged prices. No displayed rate predicts the next outcome or establishes profitability.</p>
 </section>
@@ -293,11 +295,15 @@ function drawSignalDashboard(){
  const ds=digitHistory.slice(-n);
  const ps=priceHistory.slice(-n-1);
  const target=Number(document.getElementById('signalDigit')?.value||0);
+ const barrier=Number(document.getElementById('signalBarrier')?.value??4);
  const pct=(count,total)=>total?((count/total)*100).toFixed(1)+'%':'—';
  const matches=ds.filter(d=>d===target).length;
  const differs=ds.length-matches;
  const over=ds.filter(d=>d>=5).length;
  const under=ds.filter(d=>d<5).length;
+ const higher=ds.filter(d=>d>barrier).length;
+ const lower=ds.filter(d=>d<barrier).length;
+ const compared=ds.filter(d=>d!==barrier).length;
  const even=ds.filter(d=>d%2===0).length;
  const odd=ds.length-even;
  let rises=0,falls=0,moves=0;
@@ -311,6 +317,10 @@ function drawSignalDashboard(){
  document.getElementById('sigDiffersNote').textContent=differs+' of '+ds.length+' ticks were not digit '+target;
  document.getElementById('sigOver').textContent=pct(over,ds.length);
  document.getElementById('sigUnder').textContent=pct(under,ds.length);
+ document.getElementById('sigHigher').textContent=pct(higher,compared);
+ document.getElementById('sigLower').textContent=pct(lower,compared);
+ document.getElementById('sigHigherNote').textContent=higher+' of '+compared+' non-equal digits were above '+barrier;
+ document.getElementById('sigLowerNote').textContent=lower+' of '+compared+' non-equal digits were below '+barrier;
  document.getElementById('sigEven').textContent=pct(even,ds.length);
  document.getElementById('sigOdd').textContent=pct(odd,ds.length);
  document.getElementById('sigRise').textContent=pct(rises,moves);
@@ -577,6 +587,7 @@ document.getElementById('clear').addEventListener('click',()=>{
 document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});
 document.getElementById('signalWindow').addEventListener('change',drawSignalDashboard);
 document.getElementById('signalDigit').addEventListener('change',drawSignalDashboard);
+document.getElementById('signalBarrier').addEventListener('change',drawSignalDashboard);
 document.getElementById('signalRefresh').addEventListener('click',drawSignalDashboard);
 document.getElementById('scanContract').addEventListener('change',drawScan);
 document.getElementById('contract').addEventListener('change',updateSelectionNote);
