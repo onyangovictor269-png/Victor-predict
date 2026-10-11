@@ -1,621 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VictorPredict — Live Deriv Digit Analytics &amp; Tick Statistics</title>
-<meta name="description" content="Explore VictorPredict, a free live Deriv Volatility 100 (1s) digit analytics dashboard with tick statistics, forecast validation, and transparent model comparisons. Analysis only; no guaranteed predictions or profits.">
-<meta name="robots" content="index, follow, max-image-preview:large">
-<link rel="canonical" href="https://victorpredict.vercel.app/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="VictorPredict">
-<meta property="og:title" content="VictorPredict — Live Deriv Digit Analytics">
-<meta property="og:description" content="Live Deriv tick statistics, digit analysis, and forecast validation. Analysis only; no guaranteed predictions or profits.">
-<meta property="og:url" content="https://victorpredict.vercel.app/">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="VictorPredict — Live Deriv Digit Analytics">
-<meta name="twitter:description" content="Live tick statistics and transparent forecast validation for Deriv. Analysis only.">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VictorPredict — Volatility Digit Monitor</title>
+<meta name="description" content="Live multi-market Deriv tick monitor with next-digit candidates, prediction refresh timers, entry watch status, and transparent validation.">
+<meta name="theme-color" content="#07110f">
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#151e30;--line:#29364d;--green:#36e0a1;--muted:#9ba9bf;--text:#f5f7ff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Arial,sans-serif}
-header{padding:22px 16px;border-bottom:1px solid var(--line);background:#10182a}.wrap{max-width:1000px;margin:auto}
-.brand{display:flex;align-items:center;gap:12px}.logo{background:var(--green);color:#07150f;font-weight:900;padding:12px;border-radius:12px}
-h1{font-size:22px;margin:0}.sub,.muted{color:var(--muted);font-size:13px}
-main{max-width:1000px;margin:auto;padding:18px 14px}.notice{border:1px solid #735c25;background:#2a2415;padding:12px;border-radius:12px;color:#ffdc83;font-size:13px;line-height:1.5}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.card{background:var(--panel);border:1px solid var(--line);padding:16px;border-radius:16px;min-width:0}
-.label{color:var(--muted);font-size:13px}.value{font-size:23px;font-weight:750;margin-top:8px;overflow-wrap:anywhere}.green{color:var(--green)}
-button,select{padding:12px;border-radius:10px;border:1px solid var(--line);background:#202c41;color:var(--text);font:inherit}
-button{background:var(--green);color:#062016;font-weight:750;border:0;cursor:pointer}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.controls select{flex:1;min-width:145px}
-.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.stat{background:#202b40;padding:12px;border-radius:10px}.stat strong{display:block;font-size:18px;margin-top:4px}.bars{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}.digit{background:#202b40;border-radius:10px;text-align:center;padding:10px 3px}.digit strong{display:block;font-size:19px}.digit small{font-size:11px;color:var(--muted)}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}th,td{text-align:left;padding:10px 5px;border-bottom:1px solid var(--line)}
-footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
-@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.bars{grid-template-columns:repeat(10,minmax(0,1fr))}}
-.forecast-label{text-align:center;font-size:10px;letter-spacing:.5px;color:#a7c9bd;font-weight:800;margin-top:10px}.market-timing{font-size:10px;text-align:center;color:#d9e7e1;margin-top:7px;line-height:1.35}.market-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.market-card{background:#17231f;border:1px solid #263b35;border-radius:14px;padding:12px;min-width:0}.market-card h4{font-size:13px;margin:0 0 3px}.market-card .symbol{font-size:10px;color:var(--muted)}.market-card .big-digit{font-size:28px;font-weight:900;text-align:center;color:#fff;background:#078ef0;border-radius:50%;width:54px;height:54px;display:flex;align-items:center;justify-content:center;margin:14px auto 8px}.market-card .market-rate{text-align:center;color:#e3b45e;font-size:12px;font-weight:750}.market-card .market-detail{text-align:center;font-size:11px;color:var(--muted);margin-top:5px}@media(min-width:650px){.market-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}.prediction-panel{margin:16px 0;padding:20px;border:3px solid var(--scan-border,#eab308);border-radius:18px;background:var(--scan-bg,linear-gradient(135deg,#422006,#713f12));box-shadow:0 0 0 2px #ffffff10,0 10px 28px #0005;transition:background .2s,border-color .2s}.prediction-panel.scan-green{--scan-border:#4ade80;--scan-bg:linear-gradient(135deg,#052e16,#14532d)}.prediction-panel.scan-red{--scan-border:#fb7185;--scan-bg:linear-gradient(135deg,#4c0519,#881337)}.prediction-panel.scan-yellow{--scan-border:#facc15;--scan-bg:linear-gradient(135deg,#422006,#713f12)}.prediction-kicker{font-size:12px;font-weight:900;letter-spacing:1.2px;color:#7dd3fc}.prediction-panel h2{font-size:24px;line-height:1.2;margin:10px 0;color:#fff}.scan-candidate{display:inline-block;background:#facc15;color:#111827;padding:12px 16px;border-radius:12px;font-size:22px;font-weight:950;margin:4px 0 10px}.prediction-panel p{color:#e0f2fe;font-size:14px;line-height:1.5;margin:8px 0}.prediction-foot{margin-top:12px;padding-top:10px;border-top:1px solid #7dd3fc66;color:#fde68a;font-size:11px;font-weight:800;letter-spacing:.3px}@media(min-width:650px){.prediction-panel{padding:24px}.prediction-panel h2{font-size:30px}}
+:root{color-scheme:dark;--bg:#07110f;--panel:#101b18;--panel2:#14231e;--line:#263b32;--green:#48e0a1;--lime:#b4f36b;--text:#f0f7f3;--muted:#91a99d;--blue:#76b9ff;--red:#ff8c8c}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#12251d 0,#07110f 58%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:14px}.wrap{width:min(1180px,100%);margin:auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0 17px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:10px}.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--green),var(--lime));color:#082017;font-weight:950;font-size:18px}h1{font-size:20px;margin:0;letter-spacing:-.5px}.sub{font-size:12px;color:var(--muted);margin-top:4px}.live{display:flex;align-items:center;gap:7px;color:var(--green);font-size:12px;font-weight:800}.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}.hero{padding:18px 0 12px}.hero h2{font-size:22px;margin:0 0 6px}.hero p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}.tabs,.subtabs{display:flex;gap:7px;overflow-x:auto;padding:12px 0;scrollbar-width:none}.tabs button,.subtabs button{white-space:nowrap;border:1px solid var(--line);background:#101a16;color:#a9bdb2;padding:10px 13px;border-radius:10px;font-weight:750;cursor:pointer}.tabs button.active,.subtabs button.active{background:#173c2c;border-color:#348a62;color:#c7ffe4}.subtabs{padding:4px 0 14px}.subtabs button{font-size:12px;padding:8px 11px}.status{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(120deg,#10251b,#101a17);border:1px solid #294b39;border-radius:14px;padding:14px;margin:5px 0 14px}.status strong{display:block;font-size:14px}.status small{display:block;color:var(--muted);margin-top:4px}.pill{font-size:11px;font-weight:800;border:1px solid #315c47;color:var(--green);padding:7px 9px;border-radius:9px;white-space:nowrap}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:15px}.stat{background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:12px;min-width:0}.stat span{display:block;color:var(--muted);font-size:11px}.stat b{display:block;font-size:20px;margin-top:6px;white-space:nowrap}.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 10px}.sectionhead h3{margin:0;font-size:15px}.sectionhead small{color:var(--muted)}.markets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.market{border:1px solid var(--line);background:linear-gradient(150deg,#12201a,#0d1713);border-radius:14px;padding:13px;min-width:0}.market-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.market-name{font-size:13px;font-weight:850}.symbol{font-size:10px;color:var(--muted);margin-top:3px}.badge{font-size:9px;letter-spacing:.5px;color:var(--green);background:#143426;border:1px solid #28553d;border-radius:6px;padding:5px 6px;white-space:nowrap}.price-row{display:flex;align-items:center;gap:12px;margin:15px 0 12px}.digit{width:55px;height:55px;flex:0 0 55px;display:grid;place-items:center;border-radius:50%;border:1px solid #37634a;background:#183b2a;color:#c7ffe0;font-size:27px;font-weight:900}.digit.wait{font-size:22px;color:var(--muted);background:#19221d;border-color:var(--line)}.price-label{font-size:10px;color:var(--muted)}.price{font-size:15px;font-weight:800;margin-top:4px;overflow-wrap:anywhere}.candidate{font-size:12px;color:#c6d9ce;margin-top:5px}.candidate b{color:var(--lime);font-size:16px}.mini-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.mini{background:#0b1511;border:1px solid #20342a;border-radius:8px;padding:8px;min-width:0}.mini span{font-size:9px;color:var(--muted);display:block;line-height:1.35}.mini b{font-size:12px;display:block;margin-top:4px;overflow-wrap:anywhere}.timers{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.timer{border-radius:8px;padding:9px;background:#14251c;border:1px solid #294c37}.timer span{display:block;color:var(--muted);font-size:9px;letter-spacing:.4px}.timer b{display:block;margin-top:4px;font-size:13px;color:var(--green)}.timer.entry{background:#211d12;border-color:#57472a}.timer.entry b{color:#f4d27e}.spark{height:22px;display:flex;align-items:end;gap:3px;margin:10px 0 5px}.spark i{display:block;flex:1;min-width:2px;background:#2e8a60;border-radius:2px 2px 0 0;opacity:.8}.footnote{font-size:11px;color:var(--muted);line-height:1.55;margin:18px 0 6px;border-top:1px solid var(--line);padding-top:13px}.hidden{display:none!important}.journal,.alerts,.stats-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--muted);line-height:1.6}.journal table{width:100%;border-collapse:collapse;font-size:12px}.journal td,.journal th{text-align:left;padding:9px 5px;border-bottom:1px solid var(--line)}.result-ok{color:var(--green)}.result-no{color:var(--red)}@media(min-width:760px){.wrap{padding:22px}.markets{grid-template-columns:repeat(4,minmax(0,1fr))}.hero h2{font-size:25px}.market{padding:14px}}@media(max-width:420px){.wrap{padding:12px}.stats{gap:6px}.stat{padding:10px 8px}.stat b{font-size:17px}.status{padding:11px}.status .pill{font-size:9px}.tabs button{padding:9px 11px}.mini-stats{gap:4px}.mini{padding:7px 5px}.timers{gap:5px}}
 </style>
 </head>
-<body>
-<header><div class="wrap brand"><div class="logo">VP</div><div><h1>VictorPredict</h1><div class="sub">DERIV DIGITS ANALYTICS</div></div></div></header>
-<main>
-<div class="notice"><strong>Live market data · Analysis only.</strong> This page reads public Deriv tick data. It does not log in to an account or place trades. Digit frequencies describe recent ticks and do not reliably predict the next tick or guarantee profit.</div>
-<section class="card" style="margin:16px 0;background:#101a18;border-color:#263b35"><h2 style="margin:0;font-size:20px">Volatility Predictions</h2><p class="muted">Independent live public tick feeds · historical rates only</p><div class="stats"><div class="stat"><div class="label">Feeds reporting</div><strong id="marketFeedCount">0 / 8</strong></div><div class="stat"><div class="label">Selected contract</div><strong id="marketModeLabel">Matches</strong></div></div><div class="controls" id="marketModes"><button type="button" data-mode="matches">Matches</button><button type="button" data-mode="evenodd">Even / Odd</button><button type="button" data-mode="overunder">Over / Under</button><button type="button" data-mode="higherlower">Higher / Lower</button><button type="button" data-mode="risefall">Rise / Fall</button></div><div id="marketCards" class="market-cards"></div><p class="muted">Each card uses its own market ticks. These are descriptive rolling statistics, not next-outcome guarantees. No automatic trade signal is issued.</p></section>
-<div class="grid">
-<div class="card"><div class="label">Market</div><div class="value">Volatility 100 (1s)</div><div class="sub">Symbol: 1HZ100V</div></div>
-<div class="card"><div class="label">Connection</div><div class="value" id="connection">Connecting…</div><div class="sub" id="connectionNote">VictorPredict build check · starting scanner script…</div></div>
-<div class="card"><div class="label">Last live digit</div><div class="value" id="last">—</div><div class="sub" id="lastPrice">Waiting for first live tick</div></div>
-<div class="card"><div class="label">Analysis</div><div class="value" id="signal">Collecting data</div><div class="sub" id="confidence">No prediction; gathering live ticks</div></div>
-</div>
-<section class="prediction-panel" aria-live="polite">
-<div class="prediction-kicker">ADAPTIVE AI-ASSISTED SCAN · MATCHES &amp; DIFFERS</div>
-<h2 id="scanHeadline">Collecting data…</h2>
-<div id="scanCandidate" class="scan-candidate">Waiting for 100 live ticks</div>
-<div class="controls"><label for="scanContract" class="label" style="align-self:center">Candidate type</label><select id="scanContract" aria-label="Candidate type"><option value="differs">DIFFERS</option><option value="matches">MATCHES</option></select><button id="rescan">Rescan now</button></div>
-<div class="stats"><div class="stat"><span class="label">Validation sample</span><strong id="scanSample">0 ticks</strong></div><div class="stat"><span class="label">Observed success rate</span><strong id="scanRate">—</strong></div><div class="stat"><span class="label">Successful outcomes</span><strong id="scanMatches">—</strong></div><div class="stat"><span class="label">Recent 100 forecasts</span><strong id="scanRecent">—</strong></div><div class="stat"><span class="label">Reference rate*</span><strong id="scanReference">90%</strong></div></div>
-<p id="scanReason">Collecting separate selection and validation samples. No reliable next-digit prediction is available.</p>
-<div class="card" style="margin-top:12px;background:#10182a"><h3 style="margin-top:0">Fair model comparison</h3><p class="muted">Both methods are frozen before the next tick arrives and scored against that same next tick.</p><div class="stats"><div class="stat"><span class="label">Earlier weighted method</span><strong id="compareEarlier">—</strong><small class="muted" id="compareEarlierN">0 forecasts</small></div><div class="stat"><span class="label">Upgraded adaptive method</span><strong id="compareUpgraded">—</strong><small class="muted" id="compareUpgradedN">0 forecasts</small></div></div><p class="muted" id="compareNote">Need new live forecasts to compare both methods fairly.</p></div>
-<div class="prediction-foot">GREEN = PASSED SCREEN · RED = DID NOT PASS · YELLOW = INSUFFICIENT DATA</div>
-</section>
-<section class="card" style="margin:16px 0;border:2px solid #38bdf8">
-<h3 style="margin-top:0">Live Signal Dashboard</h3>
-<p class="muted">Live rolling statistics calculated from the latest market ticks, inspired by common Deriv digit-analysis dashboards. These are historical rates, not guaranteed predictions.</p>
-<div class="controls"><label class="label" for="signalWindow" style="align-self:center">Signal window</label><select id="signalWindow"><option value="25">Last 25 ticks</option><option value="50" selected>Last 50 ticks</option><option value="100">Last 100 ticks</option><option value="250">Last 250 ticks</option></select></div>
-<div class="stats">
-<div class="stat"><span class="label">MATCHES · selected digit</span><strong id="sigMatches">—</strong><small class="muted" id="sigMatchesNote">Select digit below</small></div>
-<div class="stat"><span class="label">DIFFERS · selected digit</span><strong id="sigDiffers">—</strong><small class="muted" id="sigDiffersNote">Select digit below</small></div>
-<div class="stat"><span class="label">OVER 4 · last digit 5–9</span><strong id="sigOver">—</strong><small class="muted">Reference: 50%*</small></div>
-<div class="stat"><span class="label">UNDER 5 · last digit 0–4</span><strong id="sigUnder">—</strong><small class="muted">Reference: 50%*</small></div>
-<div class="stat"><span class="label">HIGHER · above barrier</span><strong id="sigHigher">—</strong><small class="muted" id="sigHigherNote">Choose barrier below</small></div>
-<div class="stat"><span class="label">LOWER · below barrier</span><strong id="sigLower">—</strong><small class="muted" id="sigLowerNote">Choose barrier below</small></div>
-<div class="stat"><span class="label">EVEN · last digit</span><strong id="sigEven">—</strong><small class="muted">Reference: 50%*</small></div>
-<div class="stat"><span class="label">ODD · last digit</span><strong id="sigOdd">—</strong><small class="muted">Reference: 50%*</small></div>
-<div class="stat"><span class="label">RISE · price up vs prior tick</span><strong id="sigRise">—</strong><small class="muted">Price direction</small></div>
-<div class="stat"><span class="label">FALL · price down vs prior tick</span><strong id="sigFall">—</strong><small class="muted">Price direction</small></div>
-</div>
-<div class="controls"><label class="label" for="signalDigit" style="align-self:center">Matches/Differs digit</label><select id="signalDigit"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select><label class="label" for="signalBarrier" style="align-self:center">Higher/Lower barrier</label><select id="signalBarrier"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select><button id="signalRefresh" type="button">Refresh analysis</button></div>
-<p class="muted" id="signalSummary">Waiting for live ticks. Signal rates will appear as enough market data arrives.</p>
-<p class="muted">*50% parity and Over/Under references assume evenly distributed last digits. Actual outcomes can differ. Rise/Fall excludes unchanged prices. No displayed rate predicts the next outcome or establishes profitability.</p>
-</section>
-<section class="card">
-<h3>Live digit frequency</h3>
-<div class="muted" id="freqNote">Tick history is saved locally in this browser (up to 5,000 ticks) so the audit can continue after a refresh. Export CSV to keep a separate copy.</div>
-<div class="controls"><select id="windowSize" aria-label="Observation window"><option value="25">Latest 25 ticks</option><option value="50" selected>Latest 50 ticks</option><option value="100">Latest 100 ticks</option><option value="all">All session ticks</option></select></div>
-<div class="stats"><div class="stat"><span class="label">Ticks in selected window</span><strong id="windowCount">0</strong></div><div class="stat"><span class="label">Most frequent digit</span><strong id="mostCommon">Not enough data</strong></div><div class="stat"><span class="label">Expected count at 10% each</span><strong id="expectedCount">—</strong></div><div class="stat"><span class="label">Largest deviation from 10%</span><strong id="largestDeviation">—</strong></div></div>
-<p class="muted" id="statsCaveat">The 10% line is a uniform-digit reference only, not proof that outcomes are uniform or predictive.</p>
-<div class="bars" id="digits"></div>
-<div class="controls">
-<select id="contract"><option value="differs">Review: Differs from digit</option><option value="matches">Review: Matches digit</option></select>
-<select id="target"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select>
-<button id="reconnect">Reconnect feed</button>
-<button id="exportData" type="button">Export tick CSV</button>
-<button id="clear">Clear session counts</button>
-</div>
-<p class="muted" id="message">Waiting for live data. This is analysis only; the selection controls do not place or test trades.</p>
-</section>
-<section class="card" style="margin-top:14px">
-<h3>Live trend &amp; overdue-digit analysis</h3>
-<p class="muted">A short-window comparison of recent observed digits and how many ticks have passed since each digit last appeared. These are historical descriptions, not signals for the next outcome.</p>
-<div class="stats">
-<div class="stat"><span class="label">Recent 10 vs previous 10</span><strong id="trendSummary">Collecting data</strong></div>
-<div class="stat"><span class="label">Average digit · recent 10</span><strong id="recentAverage">—</strong></div>
-<div class="stat"><span class="label">Average digit · previous 10</span><strong id="previousAverage">—</strong></div>
-<div class="stat"><span class="label">Longest current gap</span><strong id="longestGap">—</strong></div>
-</div>
-<h4>Ticks since each digit last appeared</h4>
-<div class="bars" id="overdueDigits"></div>
-<p class="muted" id="trendCaveat">Collect at least 20 live ticks for a short-window comparison. A digit being absent longer does not make it more likely to appear next.</p>
-</section>
-<section class="card" style="margin:16px 0;border:2px solid #a78bfa">
-<h3 style="margin-top:0">Digit Pattern Audit</h3>
-<p class="muted">Statistical checks on the ticks actually received in this session. The audit looks for unusual digit frequencies and dependence between consecutive digits. A low p-value is a reason to investigate, not proof of a tradable edge.</p>
-<div class="stats">
-<div class="stat"><span class="label">Audit sample</span><strong id="auditN">0 ticks</strong></div>
-<div class="stat"><span class="label">Frequency test</span><strong id="auditFreqP">Need more data</strong><small class="muted" id="auditFreqNote">Checks 10-digit uniformity</small></div>
-<div class="stat"><span class="label">Transition test</span><strong id="auditTransP">Need more data</strong><small class="muted" id="auditTransNote">Checks adjacent-digit dependence</small></div>
-<div class="stat"><span class="label">Same digit twice</span><strong id="auditRepeat">—</strong><small class="muted" id="auditRepeatNote">Uniform independent reference: 10%</small></div>
-<div class="stat"><span class="label">Most common digit</span><strong id="auditTopDigit">—</strong><small class="muted" id="auditTopNote">Observed frequency only</small></div>
-<div class="stat"><span class="label">Audit interpretation</span><strong id="auditVerdict">Collecting ticks</strong><small class="muted" id="auditVerdictNote">Need at least 1,000 ticks for the first screen</small></div>
-</div>
-<p class="muted" id="auditExplanation">This uses only public observed tick prices. It cannot inspect Deriv's private generator. Repeatedly testing many windows can create false alarms, so any finding needs a fresh holdout test.</p>
-</section>
-<section class="card" style="margin-top:14px">
-<h3>Recent live ticks</h3>
-<div class="muted">Latest prices and last digits received from the public market feed; not trade outcomes.</div>
-<table><thead><tr><th>#</th><th>Price</th><th>Last digit</th><th>Time</th></tr></thead><tbody id="history"><tr><td colspan="4">Waiting for live ticks…</td></tr></tbody></table>
-</section>
+<body><main class="wrap">
+<header><div class="brand"><div class="logo">V</div><div><h1>VictorPredict</h1><div class="sub">Live volatility digit monitor</div></div></div><div class="live"><i class="dot"></i><span id="connection">CONNECTING</span></div></header>
+<section class="hero"><h2>Volatility Predictions</h2><p>Independent live analysis for each market · Next-digit candidates · Entry watch · Prediction refresh timing</p></section>
+<nav class="tabs" id="contractTabs"><button class="active" data-contract="matches">Matches</button><button data-contract="evenodd">Even / Odd</button><button data-contract="overunder">Over / Under</button><button data-contract="higherlower">Higher / Lower</button><button data-contract="riseFall">Rise / Fall <span style="color:var(--lime)">FREE</span></button></nav>
+<nav class="subtabs" id="viewTabs"><button class="active" data-view="live">Live Entries</button><button data-view="stats">Stats</button><button data-view="journal">Journal</button><button data-view="alerts">Alerts</button></nav>
+<section class="status"><div><strong id="statusTitle">Waiting for live ticks</strong><small id="statusText">Connecting to public market feed for 8 volatility markets.</small></div><span class="pill" id="feedPill">0 / 8 MARKETS</span></section>
+<section class="stats"><div class="stat"><span>Average candidate frequency</span><b id="avgConf">—</b></div><div class="stat"><span>Markets live</span><b id="liveCount">0 / 8</b></div><div class="stat"><span>Analysing</span><b id="analyzing">8</b></div><div class="stat"><span>Forecasts scored</span><b id="scored">0</b></div></section>
+<section id="livePanel"><div class="sectionhead"><h3>All volatility markets</h3><small>Each card has its own feed and timers</small></div><div class="markets" id="markets"></div></section>
+<section id="statsPanel" class="stats-panel hidden"><h3>Market statistics</h3><p>Observed digit frequency and directional counts are calculated separately per market. These describe recent ticks and do not establish an edge on the next tick.</p><div id="statsDetails"></div></section>
+<section id="journalPanel" class="journal hidden"><h3>Forecast journal</h3><p>Candidate digits are recorded before the next tick and scored against the following observed digit. Historical frequency is not the same as hit rate.</p><div id="journalDetails">No scored forecasts yet.</div></section>
+<section id="alertsPanel" class="alerts hidden"><h3>Alerts</h3><p id="alertText">Alerts will appear here when a market feed changes state. Entry timing is shown as a monitoring window, not a verified trading signal.</p></section>
+<footer class="footnote">Important: VictorPredict is an independent analytics interface, not an exact copy of another service. Candidate digits are selected from each market’s recent history; they are not guaranteed predictions. “Entry watch” is a timing indicator only, not a recommendation to place a trade. No trades are executed and no Deriv account credentials are requested.</footer>
 </main>
-<footer>VictorPredict · Independent research tool · Trading involves risk</footer>
 <script>
-window.addEventListener('error',function(event){
- const note=document.getElementById('connectionNote');
- if(note) note.textContent='JavaScript error: '+(event.message||'script failed')+' (line '+(event.lineno||'?')+')';
-});
-</script>
-<script>
-const SYMBOL='1HZ100V';
-const MARKET_LIST=[['R_10','Volatility 10'],['1HZ10V','Volatility 10 (1s)'],['R_25','Volatility 25'],['1HZ25V','Volatility 25 (1s)'],['R_50','Volatility 50'],['1HZ50V','Volatility 50 (1s)'],['R_75','Volatility 75'],['1HZ100V','Volatility 100 (1s)']];
-const multiMarkets={};MARKET_LIST.forEach(m=>multiMarkets[m[0]]={name:m[1],digits:[],prices:[],last:null,forecast:null,forecastAt:0});let marketMode='matches';const FORECAST_REFRESH_MS=10000;let nextForecastAt=Date.now()+FORECAST_REFRESH_MS;
-function refreshMarketForecasts(){MARKET_LIST.forEach(m=>{const s=multiMarkets[m[0]],sample=s.digits.slice(-50);if(sample.length<20){s.forecast=null;return;}const freq=Array(10).fill(0);sample.forEach(d=>freq[d]++);const max=Math.max(...freq);const candidates=freq.map((v,i)=>({digit:i,count:v})).filter(x=>x.count===max);const previous=s.forecast&&s.forecast.digit;let chosen=candidates.find(x=>x.digit!==previous)||candidates[0];s.forecast={digit:chosen.digit,confidence:Math.round(chosen.count/sample.length*100),sample:sample.length};s.forecastAt=Date.now();});nextForecastAt=Date.now()+FORECAST_REFRESH_MS;renderMarketCards();}
-function renderMarketCards(){const root=document.getElementById('marketCards');if(!root)return;root.innerHTML='';let live=0;MARKET_LIST.forEach(m=>{const s=multiMarkets[m[0]],n=s.digits.length;if(n)live++;const counts=Array(10).fill(0);s.digits.forEach(d=>counts[d]++);let rate='Collecting ticks',detail=n+' observed ticks';if(n){if(marketMode==='matches'){rate='Top digit frequency '+Math.round(Math.max(...counts)/n*100)+'%';detail='Latest digit '+s.last;}else if(marketMode==='evenodd'){const h=s.digits.filter(d=>d%2===0).length;rate='Even '+Math.round(h/n*100)+'%';detail='Odd '+Math.round((n-h)/n*100)+'%';}else if(marketMode==='overunder'){const h=s.digits.filter(d=>d>=5).length;rate='Over 4 '+Math.round(h/n*100)+'%';detail='Under 5 '+Math.round((n-h)/n*100)+'%';}else if(marketMode==='higherlower'){const h=s.digits.filter(d=>d>4).length,l=s.digits.filter(d=>d<4).length,z=h+l;rate='Higher than 4 '+Math.round(h/(z||1)*100)+'%';detail='Lower than 4 '+Math.round(l/(z||1)*100)+'% (equal excluded)';}else{let u=0,d=0;for(let i=1;i<s.prices.length;i++){if(s.prices[i]>s.prices[i-1])u++;if(s.prices[i]<s.prices[i-1])d++;}rate='Rise '+Math.round(u/(u+d||1)*100)+'%';detail='Fall '+Math.round(d/(u+d||1)*100)+'% (unchanged excluded)';}}const forecast=s.forecast;const nextIn=Math.max(0,Math.ceil((nextForecastAt-Date.now())/1000));const card=document.createElement('div');card.className='market-card';card.innerHTML='<h4>'+m[1]+'</h4><div class="symbol">'+m[0]+' · '+(n?'LIVE':'WAITING')+'</div><div class="forecast-label">NEXT-DIGIT CANDIDATE</div><div class="big-digit" style="'+(forecast?'':'background:#26313a;color:#e3b45e')+'">'+(forecast?forecast.digit:'—')+'</div><div class="market-rate">'+(forecast?'Historical frequency '+forecast.confidence+'%':'Need 20 live ticks')+'</div><div class="market-detail">Latest public digit: '+(s.last===null?'—':s.last)+'</div><div class="market-timing"><b>ENTRY:</b> WAIT · timing unvalidated</div><div class="market-timing"><b>NEXT PREDICTION:</b> '+(forecast?nextIn+'s':'collecting data')+'</div><div class="market-detail">'+detail+'</div>';root.appendChild(card);});document.getElementById('marketFeedCount').textContent=live+' / '+MARKET_LIST.length;document.getElementById('marketModeLabel').textContent=({matches:'Matches / Differs',evenodd:'Even / Odd',overunder:'Over / Under',higherlower:'Higher / Lower',risefall:'Rise / Fall'})[marketMode];}
-document.querySelectorAll('#marketModes [data-mode]').forEach(b=>b.addEventListener('click',()=>{marketMode=b.dataset.mode;renderMarketCards();}));
-setInterval(()=>{if(Date.now()>=nextForecastAt)refreshMarketForecasts();else renderMarketCards();},1000);
-const counts=Array(10).fill(0);
-const digitHistory=[];
-const priceHistory=[];
-const epochHistory=[];
-const scanCycleDigits=[];
-// Walk-forward forecasts: each forecast uses only ticks observed before its outcome.
-const matchesForecasts=[];
-const comparisonResults={earlier:[],upgraded:[]};
-let lastMatchesCandidate=null;
-// Hold each forecast until the following live tick arrives.
-let pendingForecast=null;
-let samples=0, socket=null, reconnectTimer=null, pingTimer=null, reconnectAttempts=0, feedStarted=false;
-const history=[];
-const STORAGE_KEY='victorpredict_ticks_v1';
-let lastPersistedCount=0;
-const digitsEl=document.getElementById('digits');
-
-// Restore previously observed public ticks from this browser only.
-// Forecast outcomes are deliberately not restored, so validation starts fresh per page session.
-function restoreStoredTicks(){
- try{
-  const raw=localStorage.getItem(STORAGE_KEY);
-  if(!raw)return;
-  const rows=JSON.parse(raw);
-  if(!Array.isArray(rows))return;
-  rows.slice(-5000).forEach(row=>{
-   if(!row||!Number.isInteger(row.digit)||row.digit<0||row.digit>9||!Number.isFinite(Number(row.quote)))return;
-   const quote=String(row.quote),digit=row.digit;
-   digitHistory.push(digit);priceHistory.push(Number(quote));epochHistory.push(Number(row.epoch)||0);counts[digit]++;samples++;
-   history.push({price:quote,digit,time:new Date(Number(row.epoch)*1000).toLocaleTimeString()});
-  });
-  while(digitHistory.length>5000)digitHistory.shift();
-  while(priceHistory.length>5000)priceHistory.shift();
-  while(epochHistory.length>5000)epochHistory.shift();
-  while(history.length>20)history.shift();
-  lastPersistedCount=digitHistory.length;
- }catch(e){
-  console.warn('Could not restore saved VictorPredict ticks',e);
- }
+(function(){
+'use strict';
+const markets=[
+{name:'Volatility 10',symbol:'R_10'},{name:'Volatility 10 (1s)',symbol:'1HZ10V'},
+{name:'Volatility 25',symbol:'R_25'},{name:'Volatility 25 (1s)',symbol:'1HZ25V'},
+{name:'Volatility 50',symbol:'R_50'},{name:'Volatility 50 (1s)',symbol:'1HZ50V'},
+{name:'Volatility 75',symbol:'R_75'},{name:'Volatility 100 (1s)',symbol:'1HZ100V'}
+];
+const state={};let contract='matches',view='live',ws=null,retry=null,cycle=10,lastRefresh=Date.now(),journal=[],forecastId=0;
+markets.forEach(m=>state[m.symbol]={...m,prices:[],digits:[],lastPrice:null,lastDigit:null,candidate:null,candidateFreq:0,predictionIn:10,entryIn:0,ready:false,forecasts:0,correct:0,previousPrice:null,up:0,down:0,unchanged:0});
+const $=id=>document.getElementById(id);
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function modeDigit(ds){if(!ds.length)return null;const n=Array(10).fill(0);ds.forEach(d=>n[d]++);let best=0;for(let i=1;i<10;i++)if(n[i]>n[best])best=i;return {digit:best,freq:n[best]/ds.length*100,counts:n};}
+function calcCandidate(m){const recent=m.digits.slice(-100);const mode=modeDigit(recent);m.candidate=mode?mode.digit:null;m.candidateFreq=mode?mode.freq:0;}
+function recordForecast(m){if(m.candidate===null||m.lastDigit===null)return;m.pending={id:++forecastId,digit:m.candidate,at:Date.now()};}
+function scorePending(m,actual){if(!m.pending)return;const row={id:m.pending.id,market:m.name,predicted:m.pending.digit,actual,correct:m.pending.digit===actual,time:new Date().toLocaleTimeString()};journal.unshift(row);if(journal.length>100)journal.pop();m.forecasts++;if(row.correct)m.correct++;m.pending=null;}
+function fmtPrice(p){return p===null?'Waiting for tick':Number(p).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});}
+function renderMarket(m){const has=m.lastDigit!==null;const ds=m.digits.slice(-20);const bars=ds.map((d,i)=>'<i style="height:'+Math.max(12,(d+1)*9)+'%;opacity:'+(0.4+i/ds.length*.6)+'"></i>').join('');let metric1='',metric2='',metric3='';
+if(contract==='matches'){metric1='Candidate frequency';metric2='Ticks sampled';metric3='Scored hit rate';}
+else if(contract==='evenodd'){metric1='Even';metric2='Odd';metric3='Last digit';}
+else if(contract==='overunder'){metric1='Over 4';metric2='Under 5';metric3='Last digit';}
+else if(contract==='higherlower'){metric1='Above 4';metric2='Below 4';metric3='Barrier';}
+else {metric1='Rise';metric2='Fall';metric3='Flat';}
+let v1,v2,v3;
+const digits=m.digits.slice(-100),even=digits.filter(d=>d%2===0).length,odd=digits.length-even,over=digits.filter(d=>d>=5).length,under=digits.filter(d=>d<5).length,hi=digits.filter(d=>d>4).length,lo=digits.filter(d=>d<4).length;
+if(contract==='matches'){v1=m.candidate===null?'—':m.candidateFreq.toFixed(1)+'%';v2=digits.length;v3=m.forecasts?Math.round(m.correct/m.forecasts*100)+'%':'—';}
+else if(contract==='evenodd'){v1=digits.length?Math.round(even/digits.length*100)+'%':'—';v2=digits.length?Math.round(odd/digits.length*100)+'%':'—';v3=has?m.lastDigit:'—';}
+else if(contract==='overunder'){v1=digits.length?Math.round(over/digits.length*100)+'%':'—';v2=digits.length?Math.round(under/digits.length*100)+'%':'—';v3=has?m.lastDigit:'—';}
+else if(contract==='higherlower'){v1=digits.length?Math.round(hi/digits.length*100)+'%':'—';v2=digits.length?Math.round(lo/digits.length*100)+'%':'—';v3='4';}
+else {const total=m.up+m.down+m.unchanged;v1=total?Math.round(m.up/total*100)+'%':'—';v2=total?Math.round(m.down/total*100)+'%':'—';v3=total?Math.round(m.unchanged/total*100)+'%':'—';}
+return '<article class="market"><div class="market-top"><div><div class="market-name">'+escapeHtml(m.name)+'</div><div class="symbol">'+m.symbol+' · '+(has?'LIVE TICKS':'CONNECTING')+'</div></div><span class="badge">'+(has?'ANALYSING':'WAITING')+'</span></div><div class="spark">'+(bars||'<span style="font-size:10px;color:var(--muted)">Waiting for price history…</span>')+'</div><div class="price-row"><div class="digit '+(!has?'wait':'')+'">'+(has?m.lastDigit:'···')+'</div><div><div class="price-label">LATEST PUBLIC DIGIT</div><div class="price">'+fmtPrice(m.lastPrice)+'</div><div class="candidate">Next candidate: <b>'+(m.candidate===null?'—':m.candidate)+'</b> <span style="color:var(--muted)">('+ (m.candidate===null?'no sample':m.candidateFreq.toFixed(1)+'% recent frequency')+')</span></div></div></div><div class="mini-stats"><div class="mini"><span>'+metric1+'</span><b>'+v1+'</b></div><div class="mini"><span>'+metric2+'</span><b>'+v2+'</b></div><div class="mini"><span>'+metric3+'</span><b>'+v3+'</b></div></div><div class="timers"><div class="timer entry"><span>ENTRY WATCH</span><b>'+(has?'MONITOR':'WAITING')+'</b></div><div class="timer"><span>NEXT REFRESH IN</span><b><span class="countdown" data-symbol="'+m.symbol+'">'+m.predictionIn+'</span>s</b></div></div></article>';
 }
-function persistTicks(){
- try{
-  const rows=digitHistory.map((digit,i)=>({digit,quote:priceHistory[i],epoch:epochHistory[i]||0}));
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(rows.slice(-5000)));
-  lastPersistedCount=digitHistory.length;
- }catch(e){
-  const note=document.getElementById('freqNote');
-  if(note)note.textContent='Browser storage is unavailable or full. Export tick CSV before closing this page to keep a copy.';
- }
-}
-function exportTickCSV(){
- const rows=['epoch,timestamp_iso_utc,quote,last_digit'];
- digitHistory.forEach((digit,i)=>{
-  const quote=priceHistory[i],epoch=epochHistory[i]||0;
-  const iso=epoch?new Date(epoch*1000).toISOString():'';
-  rows.push([epoch,iso,quote,digit].join(','));
- });
- const blob=new Blob([rows.join('\r\n')],{type:'text/csv;charset=utf-8;'});
- const url=URL.createObjectURL(blob),link=document.createElement('a');
- link.href=url;link.download='victorpredict-ticks.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
-}
-const connectionEl=document.getElementById('connection');
-const connectionNote=document.getElementById('connectionNote');
-
-function auditGammaQ(a,x){
- if(!(x>=0)||!(a>0))return NaN;
- if(x===0)return 1;
- const gln=Math.log;
- let logGamma;
- const cof=[676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.13857109526572012,9.984369578019572e-6,1.5056327351493116e-7];
- function lg(z){
-  if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-lg(1-z);
-  z-=1;let s=0.99999999999980993;
-  for(let i=0;i<cof.length;i++)s+=cof[i]/(z+i+1);
-  const t=z+cof.length-0.5;
-  return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(s);
- }
- logGamma=lg(a);
- if(x<a+1){
-  let ap=a,sum=1/a,del=sum;
-  for(let n=1;n<=200;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-14)break;}
-  const p=sum*Math.exp(-x+a*Math.log(x)-logGamma);
-  return Math.max(0,Math.min(1,1-p));
- }
- let b=x+1-a,c=1e300,d=1/b,h=d;
- for(let i=1;i<=200;i++){
-  const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const delta=d*c;h*=delta;if(Math.abs(delta-1)<1e-14)break;
- }
- return Math.max(0,Math.min(1,Math.exp(-x+a*Math.log(x)-logGamma)*h));
-}
-function auditPText(p){return p<0.0001?'<0.0001':p.toFixed(4);}
-function drawDigitAudit(){
- const ds=digitHistory;
- const n=ds.length;
- const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
- set('auditN',n+' ticks');
- if(n<1000){
-  set('auditFreqP','Need '+(1000-n)+' more');
-  set('auditTransP','Need '+(1000-n)+' more');
-  set('auditRepeat','—');set('auditTopDigit','—');set('auditVerdict','Collecting ticks');
-  set('auditFreqNote','Minimum 1,000 ticks for initial screen');
-  set('auditTransNote','Minimum 1,000 ticks for initial screen');
-  set('auditRepeatNote','Uniform independent reference: 10%');
-  set('auditTopNote','Observed frequency only');
-  set('auditVerdictNote','Do not infer a pattern from a small sample');
-  return;
- }
- const freq=Array(10).fill(0);
- for(const d of ds)freq[d]++;
- const expected=n/10;
- const chi=freq.reduce((s,k)=>s+(k-expected)*(k-expected)/expected,0);
- const freqP=auditGammaQ(9/2,chi/2);
- let pairs=0,repeats=0;
- const matrix=Array.from({length:10},()=>Array(10).fill(0));
- const row=Array(10).fill(0),col=Array(10).fill(0);
- for(let i=1;i<n;i++){const a=ds[i-1],b=ds[i];matrix[a][b]++;row[a]++;col[b]++;pairs++;if(a===b)repeats++;}
- let transChi=0;
- for(let a=0;a<10;a++)for(let b=0;b<10;b++){
-  const e=row[a]*col[b]/pairs;
-  if(e>0)transChi+=(matrix[a][b]-e)*(matrix[a][b]-e)/e;
- }
- const transP=auditGammaQ(81/2,transChi/2);
- const repeatRate=repeats/pairs*100;
- const top=Math.max(...freq),leaders=freq.map((v,i)=>({v,i})).filter(x=>x.v===top).map(x=>x.i);
- set('auditFreqP',auditPText(freqP));
- set('auditFreqNote','χ²='+chi.toFixed(1)+' · 9 degrees of freedom');
- set('auditTransP',auditPText(transP));
- set('auditTransNote','χ²='+transChi.toFixed(1)+' · 81 degrees of freedom');
- set('auditRepeat',repeatRate.toFixed(2)+'%');
- set('auditRepeatNote',repeats+' repeats in '+pairs+' adjacent pairs · 10% reference');
- set('auditTopDigit',leaders.join(', ')+' · '+(top/n*100).toFixed(2)+'%');
- set('auditTopNote',top+' appearances; uniform reference '+expected.toFixed(1));
- const flagFreq=freqP<0.01,flagTrans=transP<0.01;
- set('auditVerdict',flagFreq||flagTrans?'Potential anomaly':'No strong anomaly');
- set('auditVerdictNote',flagFreq&&flagTrans?'Both tests flagged at 1% level; confirm on fresh data':flagFreq?'Frequency test flagged; confirm on fresh data':flagTrans?'Transition test flagged; confirm on fresh data':'Neither test crossed the 1% screen');
- set('auditExplanation','Frequency p-value tests a uniform 10-digit distribution; transition p-value tests independence of adjacent digits. These tests assume the selected digit extraction is consistent. The 1% threshold reduces but does not eliminate false alarms. A result must repeat on fresh ticks and improve out-of-sample forecasts before it is considered potentially useful.');
-}
-
-function drawDigits(){
- digitsEl.innerHTML='';
- const selected=document.getElementById('windowSize')?.value||'50';
- const windowDigits=selected==='all'?digitHistory.slice():digitHistory.slice(-Number(selected));
- const windowCounts=Array(10).fill(0);
- windowDigits.forEach(d=>windowCounts[d]++);
- document.getElementById('windowCount').textContent=windowDigits.length;
- const maxCount=Math.max(...windowCounts);
- const leaders=windowDigits.length?windowCounts.map((n,d)=>({n,d})).filter(x=>x.n===maxCount).map(x=>x.d):[];
- document.getElementById('mostCommon').textContent=windowDigits.length?(leaders.join(', ')+' ('+(maxCount/windowDigits.length*100).toFixed(1)+'%)'):'Not enough data';
- document.getElementById('expectedCount').textContent=windowDigits.length?(windowDigits.length/10).toFixed(1)+' per digit':'—';
- const deviations=windowCounts.map((n,d)=>({d,pct:windowDigits.length?n/windowDigits.length*100:0,delta:windowDigits.length?n/windowDigits.length*100-10:0}));
- const largest=deviations.reduce((best,item)=>Math.abs(item.delta)>Math.abs(best.delta)?item:best,{d:0,pct:0,delta:0});
- document.getElementById('largestDeviation').textContent=windowDigits.length?largest.d+' ('+(largest.delta>0?'+':'')+largest.delta.toFixed(1)+' pp)':'—';
- document.getElementById('statsCaveat').textContent=windowDigits.length?'Largest deviation compares the observed share with a 10% reference; it is descriptive, not a forecast.':'Collect live ticks to calculate a comparison.';
- windowCounts.forEach((n,d)=>{
-  const el=document.createElement('div'); el.className='digit';
-  const pct=windowDigits.length?(n/windowDigits.length*100).toFixed(1)+'%':'—';
-  el.innerHTML='<strong>'+d+'</strong><small>'+n+' · '+pct+'</small>';
-  digitsEl.appendChild(el);
- });
-}
-function drawSignalDashboard(){
- const n=Number(document.getElementById('signalWindow')?.value||50);
- const ds=digitHistory.slice(-n);
- const ps=priceHistory.slice(-n-1);
- const target=Number(document.getElementById('signalDigit')?.value||0);
- const barrier=Number(document.getElementById('signalBarrier')?.value??4);
- const pct=(count,total)=>total?((count/total)*100).toFixed(1)+'%':'—';
- const matches=ds.filter(d=>d===target).length;
- const differs=ds.length-matches;
- const over=ds.filter(d=>d>=5).length;
- const under=ds.filter(d=>d<5).length;
- const higher=ds.filter(d=>d>barrier).length;
- const lower=ds.filter(d=>d<barrier).length;
- const compared=ds.filter(d=>d!==barrier).length;
- const even=ds.filter(d=>d%2===0).length;
- const odd=ds.length-even;
- let rises=0,falls=0,moves=0;
- for(let i=1;i<ps.length;i++){
-  if(ps[i]>ps[i-1]){rises++;moves++;}
-  else if(ps[i]<ps[i-1]){falls++;moves++;}
- }
- document.getElementById('sigMatches').textContent=pct(matches,ds.length);
- document.getElementById('sigMatchesNote').textContent=matches+' of '+ds.length+' ticks were digit '+target;
- document.getElementById('sigDiffers').textContent=pct(differs,ds.length);
- document.getElementById('sigDiffersNote').textContent=differs+' of '+ds.length+' ticks were not digit '+target;
- document.getElementById('sigOver').textContent=pct(over,ds.length);
- document.getElementById('sigUnder').textContent=pct(under,ds.length);
- document.getElementById('sigHigher').textContent=pct(higher,compared);
- document.getElementById('sigLower').textContent=pct(lower,compared);
- document.getElementById('sigHigherNote').textContent=higher+' of '+compared+' non-equal digits were above '+barrier;
- document.getElementById('sigLowerNote').textContent=lower+' of '+compared+' non-equal digits were below '+barrier;
- document.getElementById('sigEven').textContent=pct(even,ds.length);
- document.getElementById('sigOdd').textContent=pct(odd,ds.length);
- document.getElementById('sigRise').textContent=pct(rises,moves);
- document.getElementById('sigFall').textContent=pct(falls,moves);
- document.getElementById('signalSummary').textContent=ds.length<25
-  ? 'Collecting data: '+ds.length+'/'+Math.min(n,25)+' ticks available. Results are more informative with a larger sample.'
-  : 'Showing observed rates from the latest '+ds.length+' ticks. Rise/Fall uses '+moves+' price changes; unchanged prices are excluded. These are backward-looking statistics, not next-tick forecasts.';
-}
-// Walk-forward adaptive selector. Candidate methods are scored on past outcomes only;
-// selection uses a shrunk rolling hit rate to reduce chasing tiny, noisy samples.
-const MODEL_NAMES=['Long frequency','Recent frequency','Last-digit transition','Weighted ensemble','Repeat last digit'];
-const modelResults=Object.fromEntries(MODEL_NAMES.map(name=>[name,[]]));
-function mostLikely(counts){
- let best=0;
- for(let i=1;i<counts.length;i++)if(counts[i]>counts[best])best=i;
- return best;
-}
-function predictEarlierDigit(priorDigits){
- if(priorDigits.length<100)return null;
- const long=priorDigits.slice(-100), recent=priorDigits.slice(-25);
- const longCounts=Array(10).fill(1), recentCounts=Array(10).fill(1), transition=Array(10).fill(1);
- long.forEach(d=>longCounts[d]++);recent.forEach(d=>recentCounts[d]++);
- let transitionN=0;const previous=long[long.length-1];
- for(let i=0;i<long.length-1;i++){if(long[i]===previous){transition[long[i+1]]++;transitionN++;}}
- const normalize=a=>{const total=a.reduce((s,v)=>s+v,0);return a.map(v=>v/total);};
- const lp=normalize(longCounts),rp=normalize(recentCounts),tp=normalize(transition);
- const tw=Math.min(0.25,transitionN/(transitionN+20)*0.25),lw=0.45,rw=0.55-tw;
- const ensemble=lp.map((v,i)=>lw*v+rw*rp[i]+tw*tp[i]);
- return mostLikely(ensemble);
-}
-function predictDigit(priorDigits){
- if(priorDigits.length<100)return null;
- // Larger history reduces the influence of tiny random streaks.
- const long=priorDigits.slice(-500), recent=priorDigits.slice(-100), short=priorDigits.slice(-25);
- const longCounts=Array(10).fill(1), recentCounts=Array(10).fill(1), shortCounts=Array(10).fill(1), transition=Array(10).fill(1);
- long.forEach(d=>longCounts[d]++);
- recent.forEach(d=>recentCounts[d]++);
- short.forEach(d=>shortCounts[d]++);
- const previous=long[long.length-1];
- let transitionN=0;
- for(let i=0;i<long.length-1;i++){
-  if(long[i]===previous){transition[long[i+1]]++;transitionN++;}
- }
- const normalize=a=>{const total=a.reduce((s,v)=>s+v,0);return a.map(v=>v/total);};
- const lp=normalize(longCounts), rp=normalize(recentCounts), sp=normalize(shortCounts), tp=normalize(transition);
- // Keep transition influence small unless many comparable transitions were observed.
- const tw=transitionN>=8?Math.min(0.12,(transitionN/(transitionN+40))*0.12):0;
- const ensemble=lp.map((v,i)=>(0.55-tw)*v+0.33*rp[i]+0.12*sp[i]+tw*tp[i]);
- const candidates={
-  'Long frequency':mostLikely(longCounts),
-  'Recent frequency':mostLikely(recentCounts),
-  'Last-digit transition':transitionN>=8?mostLikely(transition):mostLikely(recentCounts),
-  'Weighted ensemble':mostLikely(ensemble),
-  'Repeat last digit':previous
- };
- // Avoid rapidly switching models based on a small lucky streak.
- let selected='Weighted ensemble', bestScore=-Infinity;
- for(const name of MODEL_NAMES){
-  const outcomes=modelResults[name];
-  if(outcomes.length<200)continue;
-  const recentOutcomes=outcomes.slice(-500);
-  const hits=recentOutcomes.reduce((sum,x)=>sum+(x?1:0),0);
-  const score=(hits+20)/(recentOutcomes.length+200);
-  if(score>bestScore){bestScore=score;selected=name;}
- }
- return {digit:candidates[selected], selectedModel:selected, candidates, transitionSamples:transitionN, earlierDigit:predictEarlierDigit(priorDigits)};
-}
-function drawModelComparison(){
- const earlier=comparisonResults.earlier, upgraded=comparisonResults.upgraded;
- const hitCount=a=>a.reduce((n,x)=>n+(x?1:0),0);
- const eHits=hitCount(earlier),uHits=hitCount(upgraded);
- const eRate=earlier.length?eHits/earlier.length*100:null;
- const uRate=upgraded.length?uHits/upgraded.length*100:null;
- document.getElementById('compareEarlier').textContent=eRate===null?'—':eRate.toFixed(1)+'%';
- document.getElementById('compareUpgraded').textContent=uRate===null?'—':uRate.toFixed(1)+'%';
- document.getElementById('compareEarlierN').textContent=eHits+' / '+earlier.length+' forecasts';
- document.getElementById('compareUpgradedN').textContent=uHits+' / '+upgraded.length+' forecasts';
- const n=Math.min(earlier.length,upgraded.length);
- document.getElementById('compareNote').textContent=n<200?'Collect at least 200 matched forecasts before judging which method is better. MATCHES reference is 10%; raw results can fluctuate.':'Matched sample: '+n+' forecasts. Difference (upgraded minus earlier): '+((uRate-eRate)>=0?'+':'')+(uRate-eRate).toFixed(1)+' percentage points. This is evidence for comparison, not proof of future edge.';
-}
-function drawScan(){
- const panel=document.querySelector('.prediction-panel');
- const headline=document.getElementById('scanHeadline');
- const candidate=document.getElementById('scanCandidate');
- const reason=document.getElementById('scanReason');
- const sampleEl=document.getElementById('scanSample');
- const rateEl=document.getElementById('scanRate');
- const matchesEl=document.getElementById('scanMatches');
- const mode=document.getElementById('scanContract')?.value||'matches';
- const training=digitHistory.slice(-100);
- const outcomes=matchesForecasts;
- const n=outcomes.length;
- const successes=mode==='matches'?outcomes.filter(x=>x.hit).length:outcomes.filter(x=>!x.hit).length;
- const rate=n?successes/n:0;
- const recent=outcomes.slice(-100);
- const recentSuccesses=mode==='matches'?recent.filter(x=>x.hit).length:recent.filter(x=>!x.hit).length;
- const baseline=mode==='matches'?10:90;
- const recentEl=document.getElementById('scanRecent');
- if(recentEl) recentEl.textContent=recent.length?recentSuccesses+'/'+recent.length+' · '+(recentSuccesses/recent.length*100).toFixed(1)+'%':'—';
- // Wilson 95% lower confidence bound: avoid treating a tiny lucky sample as an edge.
- const z=1.96;
- const wilsonLower=n?((rate+z*z/(2*n)-z*Math.sqrt((rate*(1-rate)+z*z/(4*n))/n))/(1+z*z/n))*100:0;
- document.getElementById('scanReference').textContent=baseline+'%';
- panel.classList.remove('scan-green','scan-red','scan-yellow');
- if(training.length<100){
-  panel.classList.add('scan-yellow');
-  headline.textContent='YELLOW · Building training sample';
-  candidate.textContent='Collecting '+training.length+'/100 ticks';
-  sampleEl.textContent=n+' forecast outcomes';
-  rateEl.textContent='—';matchesEl.textContent='—';
-  const recentEl=document.getElementById('scanRecent'); if(recentEl)recentEl.textContent='—';
-  reason.textContent='The adaptive model combines the latest 100-tick frequency, the latest 25-tick frequency, and recent digit transitions. Each forecast is scored against the next actual tick; no hidden Deriv generator data is accessed.';
-  return;
- }
- const prediction=pendingForecast;
- const target=prediction?prediction.digit:null;
- if(target===null){candidate.textContent='Preparing next-tick forecast';return;}
- lastMatchesCandidate=target;
- const currentModel=prediction.selectedModel||'Weighted ensemble';
- candidate.textContent='NEXT TICK · '+mode.toUpperCase()+' '+target+' · '+currentModel;
- sampleEl.textContent=n+' forecast outcomes';
- rateEl.textContent=n?(rate*100).toFixed(1)+'%':'—';
- matchesEl.textContent=n?successes+' / '+n:'—';
- if(n<200){
-  panel.classList.add('scan-yellow');
-  headline.textContent='YELLOW · Accuracy not established';
-  reason.textContent='Walk-forward test: '+n+'/200 outcomes. Observed '+mode.toUpperCase()+' success rate '+(n?(rate*100).toFixed(1)+'%':'not available')+'; reference '+baseline+'%. Need at least 200 forecasts and a 95% confidence lower bound above the reference before marking a signal as passed. This is a local statistical ensemble, not a trained neural network.';
-  return;
- }
- const passed=wilsonLower>baseline;
- panel.classList.add(passed?'scan-green':'scan-red');
- headline.textContent=passed?'GREEN · Evidence above reference':'RED · No proven edge yet';
- reason.textContent='Walk-forward evaluation using only prior ticks: '+successes+'/'+n+' '+mode.toUpperCase()+' outcomes ('+rate.toFixed(1)+'%). 95% Wilson lower bound: '+wilsonLower.toFixed(1)+'%; reference: '+baseline+'%. '+(passed?'The lower confidence bound exceeds the reference in this sample. Continue monitoring; past performance still cannot guarantee the next result.':'The evidence does not establish performance above the reference. A high raw hit rate alone is not enough.');
-}
-function drawTrend(){
- const recent=digitHistory.slice(-10);
- const previous=digitHistory.slice(-20,-10);
- const average=a=>a.length?a.reduce((sum,d)=>sum+d,0)/a.length:null;
- const ra=average(recent), pa=average(previous);
- document.getElementById('recentAverage').textContent=ra===null?'—':ra.toFixed(2);
- document.getElementById('previousAverage').textContent=pa===null?'—':pa.toFixed(2);
- let trend='Collecting data';
- if(recent.length===10&&previous.length===10){
-  const delta=ra-pa;
-  trend=Math.abs(delta)<0.5?'Roughly steady':delta>0?'Average digit higher':'Average digit lower';
- }
- document.getElementById('trendSummary').textContent=trend;
- const overdue=document.getElementById('overdueDigits'); overdue.innerHTML='';
- let longest={digit:null,gap:-1};
- for(let d=0;d<10;d++){
-  let gap=0,found=false;
-  for(let i=digitHistory.length-1;i>=0;i--){if(digitHistory[i]===d){found=true;break;}gap++;}
-  if(!found)gap=digitHistory.length;
-  if(gap>longest.gap)longest={digit:d,gap};
-  const el=document.createElement('div');el.className='digit';
-  el.innerHTML='<strong>'+d+'</strong><small>'+(digitHistory.length?(found?gap+' ticks ago':'Not seen yet'):'—')+'</small>';
-  overdue.appendChild(el);
- }
- document.getElementById('longestGap').textContent=digitHistory.length?longest.digit+' · '+(longest.gap===digitHistory.length&&!digitHistory.includes(longest.digit)?'not seen yet':longest.gap+' ticks'):'—';
- document.getElementById('trendCaveat').textContent=recent.length<10||previous.length<10?'Collect at least 20 live ticks for a short-window comparison. Overdue gaps need more observations to be informative.':'Compares the average digit in two consecutive 10-tick windows. Overdue counts are descriptive only; past gaps do not predict the next digit.';
-}
-function drawHistory(){
- const body=document.getElementById('history'); body.innerHTML='';
- if(!history.length){body.innerHTML='<tr><td colspan="4">Waiting for live ticks…</td></tr>';return;}
- history.slice().reverse().forEach((h,i)=>{
-  const tr=document.createElement('tr');
-  [history.length-i,h.price,h.digit,h.time].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td);});
-  body.appendChild(tr);
- });
-}
-function setConnection(status,note){connectionEl.textContent=status;connectionNote.textContent=note;}
-function connectLive(){
- // Each new socket must subscribe again after its ping; do not carry the prior socket's flag.
- feedStarted=false;
- if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
- if(pingTimer){clearInterval(pingTimer);pingTimer=null;}
- if(socket){try{socket.onclose=null;socket.close();}catch(e){} socket=null;}
- setConnection('Connecting…','Opening public Deriv market feed');
- document.getElementById('signal').textContent='Collecting data';
- document.getElementById('confidence').textContent='No prediction; gathering live ticks';
- try{
-  socket=new WebSocket('wss://api.derivws.com/trading/v1/options/ws/public');
-  socket.onopen=()=>{
-   reconnectAttempts=0;
-   setConnection('Connected','Socket opened; checking server response');
-   socket.send(JSON.stringify({ping:1}));
-   if(pingTimer)clearInterval(pingTimer);
-   pingTimer=setInterval(()=>{
-    if(socket&&socket.readyState===WebSocket.OPEN){try{socket.send(JSON.stringify({ping:1}));}catch(e){}}
-   },30000);
-  };
-  socket.onmessage=(event)=>{
-   let data; try{data=JSON.parse(event.data);}catch(e){return;}
-   if(data.error){setConnection('Feed error',data.error.message||'Deriv returned an error');return;}
-   if(data.msg_type==='ping'&&!feedStarted){
-    feedStarted=true;
-    setConnection('Connected','Server replied to ping; requesting live ticks');
-    try{MARKET_LIST.forEach(m=>socket.send(JSON.stringify({ticks:m[0],subscribe:1})));}catch(e){setConnection('Connection error','Could not request all market ticks');}
-    return;
-   }
-   if(data.msg_type==='tick'&&data.tick){
-    const tick=data.tick;
-    const price=String(tick.quote);
-    const marketSymbol=tick.symbol;const marketDigitMatch=price.match(/(\d)$/);if(marketSymbol&&multiMarkets[marketSymbol]&&marketDigitMatch){const ms=multiMarkets[marketSymbol];ms.last=Number(marketDigitMatch[1]);ms.digits.push(ms.last);ms.prices.push(Number(price));if(ms.digits.length>100)ms.digits.shift();if(ms.prices.length>100)ms.prices.shift();if(!ms.forecast&&ms.digits.length>=20)refreshMarketForecasts();renderMarketCards();}if(marketSymbol&&marketSymbol!==SYMBOL)return;
-    const digitMatch=price.match(/(\d)$/);
-    if(!digitMatch)return;
-    const digit=Number(digitMatch[1]);
-    // Score the forecast that was displayed before this tick arrived.
-    if(pendingForecast){
-     for(const name of MODEL_NAMES){
-      modelResults[name].push(pendingForecast.candidates[name]===digit);
-      if(modelResults[name].length>5000)modelResults[name].shift();
-     }
-     matchesForecasts.push({target:pendingForecast.digit,hit:digit===pendingForecast.digit,model:pendingForecast.selectedModel});
-     comparisonResults.earlier.push(pendingForecast.earlierDigit===digit);
-     comparisonResults.upgraded.push(pendingForecast.digit===digit);
-     if(matchesForecasts.length>5000)matchesForecasts.shift();
-     if(comparisonResults.earlier.length>5000)comparisonResults.earlier.shift();
-     if(comparisonResults.upgraded.length>5000)comparisonResults.upgraded.shift();
-    }
-    samples++;counts[digit]++;digitHistory.push(digit);priceHistory.push(Number(price));epochHistory.push(Number(tick.epoch)||Math.floor(Date.now()/1000));if(digitHistory.length>5000)digitHistory.shift();if(priceHistory.length>5000)priceHistory.shift();if(epochHistory.length>5000)epochHistory.shift();
-    pendingForecast=digitHistory.length>=100?predictDigit(digitHistory.slice(-100)):null;
-     persistTicks();
-    if(scanCycleDigits.length>=100)scanCycleDigits.length=0;
-    scanCycleDigits.push(digit);
-    document.getElementById('last').textContent=digit;
-    document.getElementById('lastPrice').textContent='Live price: '+price;
-    document.getElementById('signal').textContent='Observation only';
-    document.getElementById('confidence').textContent=samples+' live ticks counted · not a forecast';
-    document.getElementById('message').textContent='Received a real tick from Deriv. Recent digit frequencies are historical descriptions, not reliable predictions of the next digit.';
-    setConnection('Connected','Receiving live ticks from Deriv');
-    history.push({price,digit,time:new Date((tick.epoch||Math.floor(Date.now()/1000))*1000).toLocaleTimeString()});
-    if(history.length>20)history.shift();
-    drawDigits();drawTrend();drawScan();drawModelComparison();drawSignalDashboard();drawDigitAudit();drawHistory();
-   }
-  };
-  socket.onerror=()=>setConnection('Connection error','Could not read the public feed. Tap Reconnect feed.');
-  socket.onclose=(event)=>{
-   if(pingTimer){clearInterval(pingTimer);pingTimer=null;}
-   if(connectionEl.textContent!=='Feed error')setConnection('Disconnected','Connection closed (code '+event.code+(event.reason?': '+event.reason:'')+'). Reconnecting automatically; if it keeps failing, we may need to register a Deriv App ID.');
-   if(!reconnectTimer){
-    const delay=Math.min(30000,2000*Math.pow(2,Math.min(reconnectAttempts,4)));
-    reconnectAttempts++;
-    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connectLive();},delay);
-   }
-  };
- }catch(e){setConnection('Connection error','This browser could not open the market feed.');}
-}
-document.getElementById('reconnect').addEventListener('click',connectLive);
-document.getElementById('exportData').addEventListener('click',exportTickCSV);
-document.getElementById('rescan').addEventListener('click',()=>{
- // Keep the completed walk-forward record so rescans do not erase evidence.
- drawScan();
- document.getElementById('scanHeadline').textContent='YELLOW · Candidate refreshed';
- document.getElementById('scanReason').textContent='Adaptive model candidate and evaluation update from live ticks. Rescanning does not erase prior scored forecasts. The model uses only observed ticks; it cannot read the internal digit generator used by Deriv.';
-});
-document.getElementById('clear').addEventListener('click',()=>{
- counts.fill(0);samples=0;digitHistory.length=0;priceHistory.length=0;epochHistory.length=0;scanCycleDigits.length=0;matchesForecasts.length=0;comparisonResults.earlier.length=0;comparisonResults.upgraded.length=0;pendingForecast=null;MODEL_NAMES.forEach(name=>{modelResults[name].length=0;});lastMatchesCandidate=null;history.length=0;lastPersistedCount=0;try{localStorage.removeItem(STORAGE_KEY);}catch(e){}drawDigits();drawTrend();drawScan();drawModelComparison();drawSignalDashboard();drawDigitAudit();drawHistory();
- document.getElementById('last').textContent='—';
- document.getElementById('lastPrice').textContent='Waiting for first live tick';
- document.getElementById('signal').textContent='Collecting data';
- document.getElementById('confidence').textContent='Counts cleared; waiting for live ticks';
- document.getElementById('message').textContent='Session counts cleared. New counts will be based on live ticks received from Deriv.';
-});
-document.getElementById('windowSize').addEventListener('change',()=>{drawDigits();drawScan();});
-document.getElementById('signalWindow').addEventListener('change',drawSignalDashboard);
-document.getElementById('signalDigit').addEventListener('change',drawSignalDashboard);
-document.getElementById('signalBarrier').addEventListener('change',drawSignalDashboard);
-document.getElementById('signalRefresh').addEventListener('click',drawSignalDashboard);
-document.getElementById('scanContract').addEventListener('change',drawScan);
-document.getElementById('contract').addEventListener('change',updateSelectionNote);
-document.getElementById('target').addEventListener('change',updateSelectionNote);
-function updateSelectionNote(){
- const contract=document.getElementById('contract').value;
- const target=document.getElementById('target').value;
- document.getElementById('message').textContent='Analysis filter selected: '+(contract==='matches'?'Matches':'Differs')+' digit '+target+'. This is only a display setting; it does not create a prediction or place a trade.';
-}
-// Restore local public tick history before opening the live feed. No account data is stored.
-restoreStoredTicks();
-renderMarketCards();
-// Start the public feed before optional dashboard rendering, so a UI rendering error cannot block connection.
-connectLive();
-try {
- drawDigits();drawTrend();drawScan();drawModelComparison();drawSignalDashboard();drawDigitAudit();drawHistory();
-} catch (e) {
- setConnection('Connecting…','Feed started; dashboard rendering error: '+(e&&e.message?e.message:'unknown error'));
- console.error('VictorPredict dashboard startup error',e);
-}
-</script>
-</body>
-</html>
+function render(){const live=markets.filter(m=>state[m.symbol].ready).length;const cs=markets.map(m=>state[m.symbol]).filter(m=>m.candidate!==null);$('markets').innerHTML=markets.map(m=>renderMarket(state[m.symbol])).join('');$('liveCount').textContent=live+' / 8';$('feedPill').textContent=live+' / 8 MARKETS';$('analyzing').textContent=live;$('connection').textContent=ws&&ws.readyState===1?'CONNECTED':'CONNECTING';$('statusTitle').textContent=live===8?'All markets receiving ticks':live?'Live feed connected — '+live+' markets active':'Waiting for live ticks';$('statusText').textContent=live===8?'Each market is analysed independently. Candidates refresh on the timer.':'Waiting for public tick updates. No predictions are scored until a following tick arrives.';$('avgConf').textContent=cs.length?Math.round(cs.reduce((a,m)=>a+m.candidateFreq,0)/cs.length)+'%':'—';$('scored').textContent=markets.reduce((a,m)=>a+state[m.symbol].forecasts,0);renderOtherPanels();}
+function renderOtherPanels(){const details=markets.map(m=>{const s=state[m.symbol],ds=s.digits.slice(-100),md=modeDigit(ds);return '<p><b>'+escapeHtml(s.name)+'</b> — sample '+ds.length+'/100; candidate '+(md?md.digit:'—')+' ('+(md?md.freq.toFixed(1)+'%':'no data')+'); scored '+s.forecasts+', correct '+s.correct+'.</p>';}).join('');$('statsDetails').innerHTML=details;$('journalDetails').innerHTML=journal.length?'<table><thead><tr><th>Time</th><th>Market</th><th>Pred.</th><th>Actual</th><th>Result</th></tr></thead><tbody>'+journal.slice(0,40).map(r=>'<tr><td>'+r.time+'</td><td>'+escapeHtml(r.market)+'</td><td>'+r.predicted+'</td><td>'+r.actual+'</td><td class="'+(r.correct?'result-ok':'result-no')+'">'+(r.correct?'MATCH':'MISS')+'</td></tr>').join('')+'</tbody></table>':'No scored forecasts yet.';}
+function onTick(t){const m=state[t.symbol];if(!m||typeof t.quote!=='number')return;const price=t.quote,digit=Number(String(price).replace(/\D/g,'').slice(-1));if(!Number.isFinite(digit))return;m.ready=true;m.previousPrice=m.lastPrice;m.lastPrice=price;m.lastDigit=digit;m.prices.push(price);m.digits.push(digit);if(m.prices.length>250)m.prices.shift();if(m.digits.length>250)m.digits.shift();if(m.previousPrice!==null){if(price>m.previousPrice)m.up++;else if(price<m.previousPrice)m.down++;else m.unchanged++;}scorePending(m,digit);calcCandidate(m);recordForecast(m);render();}
+function connect(){try{ws=new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');ws.onopen=()=>{markets.forEach(m=>ws.send(JSON.stringify({ticks:m.symbol,subscribe:1})));render();};ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.tick)onTick(d.tick);if(d.error){$('statusText').textContent='Feed response: '+d.error.message;}}catch(_){}};ws.onerror=()=>{$('connection').textContent='RECONNECTING';};ws.onclose=()=>{$('connection').textContent='RECONNECTING';clearTimeout(retry);retry=setTimeout(connect,3000);};}catch(e){retry=setTimeout(connect,3000);}}
+$('contractTabs').addEventListener('click',e=>{const b=e.target.closest('button[data-contract]');if(!b)return;contract=b.dataset.contract;document.querySelectorAll('#contractTabs button').forEach(x=>x.classList.toggle('active',x===b));render();});
+$('viewTabs').addEventListener('click',e=>{const b=e.target.closest('button[data-view]');if(!b)return;view=b.dataset.view;document.querySelectorAll('#viewTabs button').forEach(x=>x.classList.toggle('active',x===b));['live','stats','journal','alerts'].forEach(v=>$(v==='live'?'livePanel':v+'Panel').classList.toggle('hidden',v!==view));renderOtherPanels();});
+setInterval(()=>{const elapsed=Math.floor((Date.now()-lastRefresh)/1000);if(elapsed>=cycle){lastRefresh=Date.now();markets.forEach(m=>{const s=state[m.symbol];calcCandidate(s);s.predictionIn=cycle;});render();}document.querySelectorAll('.countdown').forEach(el=>{const remain=Math.max(0,cycle-Math.floor((Date.now()-lastRefresh)/1000));el.textContent=remain;});},250);
+render();connect();
+})();
+</script></body></html>
