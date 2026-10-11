@@ -529,7 +529,7 @@ function connectLive(){
    if(data.msg_type==='tick'&&data.tick){
     const tick=data.tick;
     const price=String(tick.quote);
-    const marketSymbol=tick.symbol;const marketDigitMatch=price.match(/(\\d)$/);if(marketSymbol&&multiMarkets[marketSymbol]&&marketDigitMatch){const ms=multiMarkets[marketSymbol];ms.last=Number(marketDigitMatch[1]);ms.digits.push(ms.last);ms.prices.push(Number(price));if(ms.digits.length>100)ms.digits.shift();if(ms.prices.length>100)ms.prices.shift();renderMarketCards();}if(marketSymbol&&marketSymbol!==SYMBOL)return;
+    const marketSymbol=tick.symbol;const marketDigitMatch=price.match(/(\d)$/);if(marketSymbol&&multiMarkets[marketSymbol]&&marketDigitMatch){const ms=multiMarkets[marketSymbol];ms.last=Number(marketDigitMatch[1]);ms.digits.push(ms.last);ms.prices.push(Number(price));if(ms.digits.length>100)ms.digits.shift();if(ms.prices.length>100)ms.prices.shift();renderMarketCards();}if(marketSymbol&&marketSymbol!==SYMBOL)return;
     const digitMatch=price.match(/(\d)$/);
     if(!digitMatch)return;
     const digit=Number(digitMatch[1]);
